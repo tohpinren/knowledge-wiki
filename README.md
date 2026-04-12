@@ -282,11 +282,11 @@ KWIKI_QA_MODEL=gpt-5.4-mini
 OPENAI_API_KEY=...
 ```
 
-Full ingest is provider-only in the current workflow:
+Ingest prefers the configured provider, with bounded retries and timeouts:
 
-- all supported source files are sent to the configured ingest provider as file inputs
-- there is no local extraction fallback during ingest
-- if the provider is missing or file input is unsupported, ingest fails immediately
+- supported files are sent to the configured ingest provider when file inputs are available
+- PDF and Office extraction can fall back locally when provider-side extraction fails
+- completed per-file extraction results are persisted incrementally during course ingest
 
 Create the scaffold if needed:
 
