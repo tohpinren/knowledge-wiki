@@ -42,7 +42,6 @@ system/manifests/sources/**
 !system/manifests/modules/
 system/manifests/modules/**
 !system/manifests/modules/README.md
-!system/manifests/modules/*.json
 
 system/graph/*
 !system/graph/README.md
