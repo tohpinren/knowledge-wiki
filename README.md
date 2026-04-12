@@ -88,11 +88,11 @@ This is the main interface for knowledge.
 ---
 
 ### System (`/system`)
-- `AGENTS.md` → rules for LLM behavior
-- `index.md` → page directory
-- `log.md` → history of updates
+- canonical policy and lightweight state
+- manifests, layouts, evidence, graph, metrics, and logs live here
+- only a small subset belongs in git
 
-Ensures consistency as the wiki grows.
+This keeps the published wiki readable while still giving the tooling a place for operational metadata.
 
 ---
 
@@ -110,13 +110,15 @@ Ensures consistency as the wiki grows.
 The LLM is the primary interface for interacting with the wiki.
 
 - questions are answered using `/wiki`, not raw documents
-- LLM reads relevant pages and synthesizes answers across them
-- raw sources are only used if the wiki is incomplete
+- the index is the navigation layer for locating relevant pages
+- LLM reads full relevant wiki pages and synthesizes answers across them
+- if the published wiki does not contain enough information, query says so instead of falling back to raw sources
 
 Typical flow:
 1. LLM reads `index.md` to locate relevant pages
 2. LLM reads selected pages from `/wiki`
 3. LLM synthesizes an answer
+4. LLM may suggest a reusable synthesis page, but does not auto-save it
 
 ---
 
@@ -175,6 +177,193 @@ Initial setup. Starting with:
 - exporting existing notes
 - ingesting course-by-course
 - defining schema
+
+---
+
+## Current Scaffold
+
+The repository now includes a working v1 base implementation:
+
+- `raw/` for immutable source material
+- `wiki/` for canonical markdown pages and generated index
+- `system/` for rules, manifests, review artifacts, graph data, metrics, and logs
+- `system/graph/` for the internal knowledge graph and report
+- `src/knowledge_wiki/` for the Python package
+- `tests/` for unit, integration, and acceptance coverage
+
+Implemented workflows:
+
+- recursive course ingest from directories like `raw/Y1S1/CS1231S`
+- per-file source manifests and evidence artifacts
+- provider-side PDF and Office file upload for extraction when an OpenAI-compatible provider is configured
+- LLM-planned course layouts under `system/reviews/layouts/`
+- layout approval auto-publishes canonical course pages
+- feedback-driven layout revision via reprompt
+- post-publish page revision via `revise-page`
+- wiki-first query via structured index + full page reading
+- optional synthesis suggestions from query output
+- internal graph sidecar for query expansion and lint
+- semantic linting
+- CLI entrypoint via `kwiki`
+- optional Gradio UI for query and review
+- repo-local Obsidian vault scaffold under `.obsidian/`
+
+---
+
+## Git Boundary
+
+This private repo tracks the software and the published wiki, not the raw source dump or every generated runtime artifact.
+
+Tracked:
+
+- `src/`, `tests/`, `README.md`, `pyproject.toml`, `uv.lock`, `.env.example`
+- shared `.obsidian/` config
+- canonical wiki pages under `wiki/`
+- minimal `system/` state such as `AGENTS.md`, README files, and module manifests
+
+Ignored:
+
+- `raw/` source files
+- `personal/` notes
+- generated `system/evidence/`, `system/reviews/`, `system/metrics/`, `system/manifests/sources/`
+- generated `system/index.md`, `system/log.md`, and graph payloads
+- local workspace files such as `.obsidian/workspace.json`
+
+---
+
+## Quick Start
+
+Install the package in editable mode:
+
+```bash
+pip install -e .
+```
+
+Create a repo-local `.env` from the example and set your provider settings:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
+
+```dotenv
+GEMINI_API_KEY=...
+KWIKI_INGEST_PROVIDER=gemini
+KWIKI_INGEST_MODEL=gemini-2.5-flash-lite
+KWIKI_QA_PROVIDER=gemini
+KWIKI_QA_MODEL=gemini-2.5-flash
+KWIKI_INGEST_CONCURRENCY=4
+```
+
+`Settings.from_root()` now loads `.env` automatically, so this is the main place to change providers and models.
+
+Open the repository root in Obsidian, not just `wiki/`. The bootstrap now creates a minimal `.obsidian/` vault config and uses `raw/assets/` for downloaded attachments.
+
+Provider/model selection is split by task:
+
+- ingest uses `KWIKI_INGEST_PROVIDER` and `KWIKI_INGEST_MODEL`
+- query/revision uses `KWIKI_QA_PROVIDER` and `KWIKI_QA_MODEL`
+- `KWIKI_PROVIDER` and `KWIKI_MODEL` still work as global fallbacks for backward compatibility
+
+The default configuration now assumes Gemini:
+
+- ingest defaults to `gemini` + `gemini-2.5-flash-lite`
+- Q&A defaults to `gemini` + `gemini-2.5-flash`
+- `KWIKI_INGEST_CONCURRENCY` defaults to `4`
+
+To switch either path back to OpenAI, set the task-specific provider/model and provide `OPENAI_API_KEY`:
+
+```dotenv
+KWIKI_INGEST_PROVIDER=openai_compatible
+KWIKI_INGEST_MODEL=gpt-5.4-mini
+KWIKI_QA_PROVIDER=openai_compatible
+KWIKI_QA_MODEL=gpt-5.4-mini
+OPENAI_API_KEY=...
+```
+
+Full ingest is provider-only in the current workflow:
+
+- all supported source files are sent to the configured ingest provider as file inputs
+- there is no local extraction fallback during ingest
+- if the provider is missing or file input is unsupported, ingest fails immediately
+
+Create the scaffold if needed:
+
+```bash
+kwiki init
+```
+
+Put a course under `raw/`, for example:
+
+```text
+raw/
+  Y1S1/
+    CS1231S/
+      lectures/
+      tutorials/
+      labs/
+```
+
+Run a recursive course ingest:
+
+```bash
+kwiki ingest-course raw/Y1S1/CS1231S
+```
+
+Ingest extraction and page drafting run in parallel with bounded concurrency controlled by `KWIKI_INGEST_CONCURRENCY`.
+
+Inspect and approve the planned layout:
+
+```bash
+kwiki layouts
+kwiki approve-layout layout-y1s1-cs1231s-<batch>
+```
+
+If the layout is wrong, revise it with feedback instead of starting from scratch:
+
+```bash
+kwiki revise-layout layout-y1s1-cs1231s-<batch> --feedback "Split the topic tree more clearly and keep proofs separate from worked artifacts."
+```
+
+Approving the layout publishes the canonical pages immediately:
+
+```bash
+kwiki approve-layout layout-y1s1-cs1231s-<batch>
+```
+
+If a published page needs another pass:
+
+```bash
+kwiki revise-page wiki/courses/y1s1/cs1231s/topics/core-concepts.md --feedback "Be more concise and keep only the most reusable ideas."
+```
+
+Published pages land under:
+
+```text
+wiki/courses/y1s1/cs1231s/
+  index.md
+  topics/
+```
+
+Ask a question against the published wiki:
+
+```bash
+kwiki query "How does normalization compare across courses?"
+```
+
+Run lint:
+
+```bash
+kwiki lint
+```
+
+Launch the local review UI:
+
+```bash
+pip install .[ui]
+kwiki ui
+```
 
 ---
 
