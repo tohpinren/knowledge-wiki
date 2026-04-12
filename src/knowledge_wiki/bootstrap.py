@@ -33,6 +33,7 @@ BOOTSTRAP_FILES = {
         '  "graph"\n'
         "]\n"
     ),
+    ".obsidian/appearance.json": "{}\n",
     ".obsidian/graph.json": (
         "{\n"
         '  "search": "path:wiki",\n'
