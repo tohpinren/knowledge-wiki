@@ -1,0 +1,38 @@
+{
+  "batch_id": "y1s1-es2660-20260412t070151z",
+  "created_at": "2026-04-12T07:01:51+00:00",
+  "discovered_files": 13,
+  "draft_review_state": "approved",
+  "layout_review_state": "pending",
+  "metadata": {
+    "reused_evidence_files": 0,
+    "skipped_files": [
+      {
+        "path": ".DS_Store",
+        "reason": "ignored_file"
+      }
+    ],
+    "usable_files": [
+      "AY2223 S1 Aug2022 Slides T03_CA1 A complete guide.pdf",
+      "AY2223 S1 Aug2022 Slides T12_Panels 1 & 2 Prompts.pdf",
+      "AY2223 S1 Aug2022 Slides T14_updated.pdf",
+      "AY2223_S1_Aug2022_Course overview and assessments_7Oct.pdf",
+      "CA2_SG16_TohPinRen.docx",
+      "Critical Thinking Steamlined Conception.pdf",
+      "Draft1.docx",
+      "Draft2.docx",
+      "ES2660_SG16_TohPinRen_commentary.docx",
+      "SG16_TohPinRen_CR.docx",
+      "T1_Critical Thinking Glossary.pdf",
+      "The Miniature Guide to Critical Thinking Concepts and Tools.pdf"
+    ]
+  },
+  "module_code": "ES2660",
+  "module_id": "y1s1-es2660",
+  "root_path": "raw/Y1S1/ES2660",
+  "skipped_files": 1,
+  "status": "published",
+  "term": "Y1S1",
+  "updated_at": "2026-04-12T07:10:23+00:00",
+  "usable_files": 12
+}
