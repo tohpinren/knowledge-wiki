@@ -201,7 +201,7 @@ Implemented workflows:
 - feedback-driven layout revision via reprompt
 - post-publish page revision via `revise-page`
 - wiki-first query via structured index + full page reading
-- optional synthesis suggestions from query output
+- optional synthesis suggestions from query output, with explicit save to canonical synthesis pages
 - internal graph sidecar for query expansion and lint
 - semantic linting
 - CLI entrypoint via `kwiki`

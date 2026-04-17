@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..config import Settings
+from ..models import SynthesisSuggestion
 from ..providers import build_provider
 from ..workflows import LintWorkflow, QueryWorkflow, ReviewWorkflow
 
@@ -26,16 +27,32 @@ def build_app(root_dir: str | None = None):
         ]
 
     def page_choices() -> list[tuple[str, str]]:
-        return [
-            (entry["choice_label"], entry["path"])
-            for entry in review_workflow.list_pages()
-        ]
+        return [(entry["choice_label"], entry["path"]) for entry in review_workflow.list_pages()]
 
     def run_query(question: str):
         answer = query_workflow.answer(question)
         suggestion = answer.suggested_synthesis.to_dict() if answer.suggested_synthesis else {}
         suggestion_body = answer.suggested_synthesis.body if answer.suggested_synthesis else ""
-        return answer.answer_markdown, [hit.to_dict() for hit in answer.hits], suggestion, suggestion_body
+        return (
+            answer.answer_markdown,
+            [hit.to_dict() for hit in answer.hits],
+            suggestion,
+            suggestion_body,
+            "",
+        )
+
+    def save_query_synthesis(suggestion_payload: dict[str, object]):
+        if not suggestion_payload:
+            return "No synthesis suggestion to save.", gr.update(choices=page_choices())
+        try:
+            suggestion = SynthesisSuggestion.from_dict(suggestion_payload)
+            saved_path, created = query_workflow.save_synthesis(suggestion)
+        except Exception as exc:
+            return f"Error: {exc}", gr.update(choices=page_choices())
+        message = (
+            f"Saved `{saved_path}`." if created else f"Synthesis already exists at `{saved_path}`."
+        )
+        return message, gr.update(choices=page_choices(), value=saved_path)
 
     def inspect_layout(layout_id: str):
         if not layout_id:
@@ -143,9 +160,25 @@ def build_app(root_dir: str | None = None):
 
     def revise_page(page_path: str, feedback: str):
         if not page_path:
-            return "Select a page first.", gr.update(choices=page_choices()), "", [], {}, "", feedback
+            return (
+                "Select a page first.",
+                gr.update(choices=page_choices()),
+                "",
+                [],
+                {},
+                "",
+                feedback,
+            )
         if not feedback.strip():
-            return "Enter revision feedback first.", gr.update(choices=page_choices()), "", [], {}, "", feedback
+            return (
+                "Enter revision feedback first.",
+                gr.update(choices=page_choices()),
+                "",
+                [],
+                {},
+                "",
+                feedback,
+            )
         try:
             revised_path, page = review_workflow.revise_page(page_path, feedback)
         except Exception as exc:
@@ -168,12 +201,18 @@ def build_app(root_dir: str | None = None):
     with gr.Blocks(title="Knowledge Wiki") as app:
         gr.Markdown("# Knowledge Wiki")
         with gr.Tab("Query"):
-            question = gr.Textbox(label="Question", lines=4, placeholder="How does normalization compare across my database and ML notes?")
+            question = gr.Textbox(
+                label="Question",
+                lines=4,
+                placeholder="How does normalization compare across my database and ML notes?",
+            )
             query_button = gr.Button("Ask")
             answer_markdown = gr.Markdown(label="Answer")
             evidence_json = gr.JSON(label="Evidence")
             suggestion_json = gr.JSON(label="Suggested synthesis")
             suggestion_body = gr.Textbox(label="Suggested synthesis body", lines=12)
+            save_synthesis_button = gr.Button("Save synthesis")
+            synthesis_status = gr.Textbox(label="Synthesis status")
 
         with gr.Tab("Layout Review"):
             pending_layouts = gr.Dropdown(label="Pending layouts", choices=layout_choices())
@@ -187,7 +226,11 @@ def build_app(root_dir: str | None = None):
                 label="Layout pages",
             )
             layout_json = gr.JSON(label="Raw layout payload")
-            layout_feedback = gr.Textbox(label="Revision feedback", lines=4, placeholder="Ask for a different layout or hierarchy.")
+            layout_feedback = gr.Textbox(
+                label="Revision feedback",
+                lines=4,
+                placeholder="Ask for a different layout or hierarchy.",
+            )
             revise_layout_button = gr.Button("Revise layout")
             approve_layout_button = gr.Button("Approve layout")
             reject_layout_button = gr.Button("Reject layout")
@@ -222,18 +265,39 @@ def build_app(root_dir: str | None = None):
         query_button.click(
             run_query,
             inputs=[question],
-            outputs=[answer_markdown, evidence_json, suggestion_json, suggestion_body],
+            outputs=[
+                answer_markdown,
+                evidence_json,
+                suggestion_json,
+                suggestion_body,
+                synthesis_status,
+            ],
+        )
+        save_synthesis_button.click(
+            save_query_synthesis,
+            inputs=[suggestion_json],
+            outputs=[synthesis_status, published_pages],
         )
         pending_layouts.change(
             inspect_layout,
             inputs=[pending_layouts],
             outputs=[layout_summary, layout_pages, layout_json],
         )
-        refresh_layouts.click(lambda: gr.update(choices=layout_choices()), outputs=[pending_layouts])
+        refresh_layouts.click(
+            lambda: gr.update(choices=layout_choices()), outputs=[pending_layouts]
+        )
         revise_layout_button.click(
             revise_layout,
             inputs=[pending_layouts, layout_feedback],
-            outputs=[layout_status, pending_layouts, published_pages, layout_summary, layout_pages, layout_json, layout_feedback],
+            outputs=[
+                layout_status,
+                pending_layouts,
+                published_pages,
+                layout_summary,
+                layout_pages,
+                layout_json,
+                layout_feedback,
+            ],
         )
         approve_layout_button.click(
             approve_layout,
@@ -254,7 +318,15 @@ def build_app(root_dir: str | None = None):
         revise_page_button.click(
             revise_page,
             inputs=[published_pages, page_feedback],
-            outputs=[page_status, published_pages, page_summary, page_evidence, page_json, page_preview, page_feedback],
+            outputs=[
+                page_status,
+                published_pages,
+                page_summary,
+                page_evidence,
+                page_json,
+                page_preview,
+                page_feedback,
+            ],
         )
         lint_button.click(run_lint, outputs=[lint_markdown, lint_json])
 

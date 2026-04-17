@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from collections import Counter
 import re
+from collections import Counter
 
 from ..models import CatalogEntry, RetrievalHit
 from ..utils import STOPWORDS, compact_text, tokenize
 
 
-def search_catalog(entries: list[CatalogEntry], query: str, *, max_results: int = 5) -> list[RetrievalHit]:
+def search_catalog(
+    entries: list[CatalogEntry], query: str, *, max_results: int = 5
+) -> list[RetrievalHit]:
     query_tokens = _meaningful_query_tokens(query)
     if not query_tokens:
         return []

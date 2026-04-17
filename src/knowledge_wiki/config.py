@@ -38,10 +38,10 @@ class Settings:
     openai_base_url: str = "https://api.openai.com/v1"
     openai_api_key_env: str = "OPENAI_API_KEY"
     gemini_api_key_env: str = "GEMINI_API_KEY"
-    max_retrieval_hits: int = 5
+    max_retrieval_hits: int = 10
 
     @classmethod
-    def from_root(cls, root_dir: str | Path | None = None) -> "Settings":
+    def from_root(cls, root_dir: str | Path | None = None) -> Settings:
         root = Path(root_dir or ".").resolve()
         file_env = _load_env_file(root / ".env")
         return cls(
@@ -63,16 +63,42 @@ class Settings:
             file_env=file_env,
             provider_name=_env_value("KWIKI_PROVIDER", file_env, default="openai_compatible"),
             model_name=_env_value("KWIKI_MODEL", file_env, default="gpt-5.4-mini"),
-            ingest_provider_name=_env_with_fallback("KWIKI_INGEST_PROVIDER", "KWIKI_PROVIDER", file_env=file_env, default="gemini"),
-            ingest_model_name=_env_with_fallback("KWIKI_INGEST_MODEL", "KWIKI_MODEL", file_env=file_env, default="gemini-2.5-flash-lite"),
-            qa_provider_name=_env_with_fallback("KWIKI_QA_PROVIDER", "KWIKI_PROVIDER", file_env=file_env, default="gemini"),
-            qa_model_name=_env_with_fallback("KWIKI_QA_MODEL", "KWIKI_MODEL", file_env=file_env, default="gemini-2.5-flash"),
-            ingest_concurrency=_parse_positive_int(_env_value("KWIKI_INGEST_CONCURRENCY", file_env, default="4"), default=4),
-            ingest_timeout_ms=_parse_positive_int(_env_value("KWIKI_INGEST_TIMEOUT_MS", file_env, default="120000"), default=120000),
-            qa_timeout_ms=_parse_positive_int(_env_value("KWIKI_QA_TIMEOUT_MS", file_env, default="60000"), default=60000),
-            openai_base_url=_env_value("KWIKI_OPENAI_BASE_URL", file_env, default="https://api.openai.com/v1"),
-            openai_api_key_env=_env_value("KWIKI_OPENAI_KEY_ENV", file_env, default="OPENAI_API_KEY"),
-            gemini_api_key_env=_env_value("KWIKI_GEMINI_KEY_ENV", file_env, default="GEMINI_API_KEY"),
+            ingest_provider_name=_env_with_fallback(
+                "KWIKI_INGEST_PROVIDER", "KWIKI_PROVIDER", file_env=file_env, default="gemini"
+            ),
+            ingest_model_name=_env_with_fallback(
+                "KWIKI_INGEST_MODEL",
+                "KWIKI_MODEL",
+                file_env=file_env,
+                default="gemini-2.5-flash-lite",
+            ),
+            qa_provider_name=_env_with_fallback(
+                "KWIKI_QA_PROVIDER", "KWIKI_PROVIDER", file_env=file_env, default="gemini"
+            ),
+            qa_model_name=_env_with_fallback(
+                "KWIKI_QA_MODEL", "KWIKI_MODEL", file_env=file_env, default="gemini-2.5-flash"
+            ),
+            ingest_concurrency=_parse_positive_int(
+                _env_value("KWIKI_INGEST_CONCURRENCY", file_env, default="4"), default=4
+            ),
+            ingest_timeout_ms=_parse_positive_int(
+                _env_value("KWIKI_INGEST_TIMEOUT_MS", file_env, default="120000"), default=120000
+            ),
+            qa_timeout_ms=_parse_positive_int(
+                _env_value("KWIKI_QA_TIMEOUT_MS", file_env, default="60000"), default=60000
+            ),
+            max_retrieval_hits=_parse_positive_int(
+                _env_value("KWIKI_MAX_RETRIEVAL_HITS", file_env, default="10"), default=10
+            ),
+            openai_base_url=_env_value(
+                "KWIKI_OPENAI_BASE_URL", file_env, default="https://api.openai.com/v1"
+            ),
+            openai_api_key_env=_env_value(
+                "KWIKI_OPENAI_KEY_ENV", file_env, default="OPENAI_API_KEY"
+            ),
+            gemini_api_key_env=_env_value(
+                "KWIKI_GEMINI_KEY_ENV", file_env, default="GEMINI_API_KEY"
+            ),
         )
 
     def ensure_layout(self) -> None:
@@ -149,7 +175,9 @@ def _env_value(key: str, file_env: dict[str, str], *, default: str) -> str:
     return default
 
 
-def _env_with_fallback(primary: str, fallback: str, *, file_env: dict[str, str], default: str) -> str:
+def _env_with_fallback(
+    primary: str, fallback: str, *, file_env: dict[str, str], default: str
+) -> str:
     value = _env_value(primary, file_env, default="")
     if value:
         return value

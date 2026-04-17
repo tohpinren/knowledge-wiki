@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from ..models import ExtractedSource, SourceManifest
-from .base import SourceAdapter, infer_title_from_markdown, read_text_file, resolve_source_path, split_markdown_sections
+from .base import (
+    SourceAdapter,
+    infer_title_from_markdown,
+    read_text_file,
+    resolve_source_path,
+    split_markdown_sections,
+)
 
 
 class MarkdownSourceAdapter(SourceAdapter):

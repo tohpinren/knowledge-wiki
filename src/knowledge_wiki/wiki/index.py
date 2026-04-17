@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections import defaultdict
 import json
+from collections import defaultdict
 
 from ..config import Settings
 from .pages import extract_related_refs, iter_page_paths, read_page
@@ -27,15 +27,18 @@ def regenerate_wiki_index(settings: Settings) -> None:
                 continue
             lines.append(f"## {page_type.title()}s")
             lines.append("")
-            for title, relative_path, metadata in sorted(items, key=lambda item: (item[0].lower(), item[1])):
+            for title, relative_path, metadata in sorted(
+                items, key=lambda item: (item[0].lower(), item[1])
+            ):
                 rendered = " :: ".join(
-                    f"{key}={_render_index_scalar(value)}"
-                    for key, value in metadata.items()
+                    f"{key}={_render_index_scalar(value)}" for key, value in metadata.items()
                 )
                 lines.append(f"- [{title}]({relative_path}) :: {rendered}")
             lines.append("")
 
-    settings.wiki_dir.joinpath("index.md").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    settings.wiki_dir.joinpath("index.md").write_text(
+        "\n".join(lines).rstrip() + "\n", encoding="utf-8"
+    )
 
 
 def _page_index_metadata(page) -> dict[str, object]:

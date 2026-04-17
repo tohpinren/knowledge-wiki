@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections import defaultdict
-from datetime import datetime, timedelta, timezone
 import re
+from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 
 from ..bootstrap import bootstrap_repository
 from ..config import Settings
@@ -26,8 +26,7 @@ class LintWorkflow:
         self._progress(f"Running lint rules across {len(entries)} page(s).")
         graph, _ = build_knowledge_graph(self.settings)
         manifests_by_source_id = {
-            manifest.source_id: manifest
-            for manifest in list_source_manifests(self.settings)
+            manifest.source_id: manifest for manifest in list_source_manifests(self.settings)
         }
         graph_contains = defaultdict(set)
         for edge in graph.get("edges", []):
@@ -36,7 +35,9 @@ class LintWorkflow:
         by_page_id = {entry.page_id: entry for entry in entries}
         known_targets = set(by_page_id)
         known_targets.update(slugify(entry.title) for entry in entries)
-        known_targets.update(slugify(entry.path.rsplit("/", maxsplit=1)[-1].removesuffix(".md")) for entry in entries)
+        known_targets.update(
+            slugify(entry.path.rsplit("/", maxsplit=1)[-1].removesuffix(".md")) for entry in entries
+        )
         backlinks: dict[str, set[str]] = defaultdict(set)
         for entry in entries:
             for target in entry.related:
@@ -151,7 +152,7 @@ class LintWorkflow:
 
     def _stale_layout_findings(self) -> list[LintFinding]:
         findings: list[LintFinding] = []
-        threshold = datetime.now(timezone.utc) - timedelta(days=7)
+        threshold = datetime.now(UTC) - timedelta(days=7)
         for layout in list_layout_reviews(self.settings, state="pending"):
             try:
                 created = datetime.fromisoformat(layout.created_at)
@@ -275,13 +276,9 @@ class LintWorkflow:
     def _missing_concept_page_findings(self, entries) -> list[LintFinding]:
         findings: list[LintFinding] = []
         topic_to_pages = defaultdict(set)
-        known_page_slugs = {
-            slugify(entry.title)
-            for entry in entries
-        }
+        known_page_slugs = {slugify(entry.title) for entry in entries}
         known_page_slugs.update(
-            slugify(entry.path.rsplit("/", maxsplit=1)[-1].removesuffix(".md"))
-            for entry in entries
+            slugify(entry.path.rsplit("/", maxsplit=1)[-1].removesuffix(".md")) for entry in entries
         )
         for entry in entries:
             for topic in entry.topics:

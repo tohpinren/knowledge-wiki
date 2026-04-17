@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..models import ExtractedSource, SourceManifest
-from .base import SourceAdapter, infer_title_from_markdown, resolve_source_path, split_markdown_sections
+from .base import (
+    SourceAdapter,
+    infer_title_from_markdown,
+    resolve_source_path,
+    split_markdown_sections,
+)
 
 
 class NotionSourceAdapter(SourceAdapter):

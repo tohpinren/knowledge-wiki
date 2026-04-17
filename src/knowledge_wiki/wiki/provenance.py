@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-
 SOURCE_REF_RE = re.compile(r"\[source:([A-Za-z0-9_-]+#[A-Za-z0-9_-]+)\]")
 
 

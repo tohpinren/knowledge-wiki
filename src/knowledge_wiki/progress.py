@@ -8,6 +8,15 @@ from typing import TextIO
 ProgressCallback = Callable[[str], None]
 
 
+def format_elapsed_seconds(*, seconds: float) -> str:
+    """Return a short duration string for logs: seconds only if <= 60s, else minutes and seconds."""
+    if seconds <= 60.0:
+        return f"{seconds:.1f}s"
+    minutes = int(seconds // 60)
+    remainder = seconds % 60
+    return f"{minutes}m {remainder:.1f}s"
+
+
 def noop_progress(message: str) -> None:
     _ = message
 
@@ -25,10 +34,12 @@ class CliProgressReporter:
         self.emit(f"Starting in {root}.")
 
     def finish(self) -> None:
-        self.emit(f"Completed in {monotonic() - self.started_at:.1f}s.")
+        elapsed = monotonic() - self.started_at
+        self.emit(f"Completed in {format_elapsed_seconds(seconds=elapsed)}.")
 
     def fail(self, exc: Exception) -> None:
-        self.emit(f"Failed after {monotonic() - self.started_at:.1f}s: {exc}")
+        elapsed = monotonic() - self.started_at
+        self.emit(f"Failed after {format_elapsed_seconds(seconds=elapsed)}: {exc}")
 
 
-__all__ = ["CliProgressReporter", "ProgressCallback", "noop_progress"]
+__all__ = ["CliProgressReporter", "ProgressCallback", "format_elapsed_seconds", "noop_progress"]

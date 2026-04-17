@@ -75,7 +75,9 @@ class OpenAICompatibleProvider(LLMProvider):
         try:
             for path in files:
                 uploaded_file_ids.append(self._upload_file(path))
-            return self._create_response_with_files(prompt, file_ids=uploaded_file_ids, system_prompt=system_prompt)
+            return self._create_response_with_files(
+                prompt, file_ids=uploaded_file_ids, system_prompt=system_prompt
+            )
         finally:
             for file_id in uploaded_file_ids:
                 self._delete_file(file_id)
@@ -179,7 +181,7 @@ def _build_multipart_body(
         chunks.extend(
             [
                 b"--" + boundary_bytes + b"\r\n",
-                f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8"),
+                f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode(),
                 value.encode("utf-8"),
                 b"\r\n",
             ]
@@ -192,7 +194,7 @@ def _build_multipart_body(
             (
                 f'Content-Disposition: form-data; name="file"; filename="{path.name}"\r\n'
                 f"Content-Type: {mime_type}\r\n\r\n"
-            ).encode("utf-8"),
+            ).encode(),
             path.read_bytes(),
             b"\r\n",
             b"--" + boundary_bytes + b"--\r\n",
@@ -242,7 +244,11 @@ def _guess_mime_type(path: Path) -> str:
         ".yaml": "text/yaml",
         ".yml": "text/yaml",
     }
-    return overrides.get(path.suffix.lower()) or mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    return (
+        overrides.get(path.suffix.lower())
+        or mimetypes.guess_type(path.name)[0]
+        or "application/octet-stream"
+    )
 
 
 def _openai_usage(parsed: dict, *, provider: str, model: str):

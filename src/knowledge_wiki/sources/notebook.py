@@ -22,7 +22,9 @@ class NotebookSourceAdapter(SourceAdapter):
                 continue
             heading = "Markdown Cell" if cell_type == "markdown" else "Code Cell"
             section_id = f"{cell_type}-{counter}"
-            sections.append(SourceSection(section_id=section_id, heading=heading, text=source.strip()))
+            sections.append(
+                SourceSection(section_id=section_id, heading=heading, text=source.strip())
+            )
             text_parts.append(f"{heading}\n{source.strip()}")
             counter += 1
         text = "\n\n".join(text_parts)
@@ -30,5 +32,6 @@ class NotebookSourceAdapter(SourceAdapter):
             manifest=manifest,
             title=manifest.title,
             text=text.strip(),
-            sections=sections or [SourceSection(section_id="cell-1", heading="Notebook", text="Empty notebook")],
+            sections=sections
+            or [SourceSection(section_id="cell-1", heading="Notebook", text="Empty notebook")],
         )

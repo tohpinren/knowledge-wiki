@@ -4,9 +4,19 @@ from pathlib import Path
 
 import pytest
 
-from knowledge_wiki.models import CatalogEntry, EvidenceArtifact, GenerationResult, LayoutPagePlan, ModuleManifest, SourceManifest, WikiPage
-from knowledge_wiki.providers.base import LLMProvider, ProviderError
+from knowledge_wiki.config import Settings
+from knowledge_wiki.models import (
+    CatalogEntry,
+    EvidenceArtifact,
+    GenerationResult,
+    LayoutPagePlan,
+    ModuleManifest,
+    SourceManifest,
+    WikiPage,
+)
+from knowledge_wiki.progress import format_elapsed_seconds
 from knowledge_wiki.providers import build_provider
+from knowledge_wiki.providers.base import LLMProvider, ProviderError
 from knowledge_wiki.providers.gemini import _gemini_usage
 from knowledge_wiki.providers.openai_compatible import _openai_usage
 from knowledge_wiki.retrieval.search import search_catalog
@@ -14,7 +24,6 @@ from knowledge_wiki.sources.discovery import classify_path, discover_course_file
 from knowledge_wiki.sources.notebook import NotebookSourceAdapter
 from knowledge_wiki.sources.office import extract_office_text
 from knowledge_wiki.sources.pdf import PDFSourceAdapter
-from knowledge_wiki.config import Settings
 from knowledge_wiki.utils import extract_json_object, utc_now
 from knowledge_wiki.wiki.frontmatter import split_frontmatter
 from knowledge_wiki.wiki.pages import render_page
@@ -23,6 +32,18 @@ from knowledge_wiki.workflows import IngestWorkflow, LintWorkflow, QueryWorkflow
 from knowledge_wiki.workflows.common import save_source_manifest
 
 from .conftest import ScriptedCourseProvider, write_notebook
+
+
+def test_format_elapsed_seconds_uses_seconds_only_up_to_sixty() -> None:
+    assert format_elapsed_seconds(seconds=0.0) == "0.0s"
+    assert format_elapsed_seconds(seconds=30.35) == "30.4s"
+    assert format_elapsed_seconds(seconds=60.0) == "60.0s"
+
+
+def test_format_elapsed_seconds_uses_minutes_when_over_sixty() -> None:
+    assert format_elapsed_seconds(seconds=60.1) == "1m 0.1s"
+    assert format_elapsed_seconds(seconds=90.0) == "1m 30.0s"
+    assert format_elapsed_seconds(seconds=2028.5) == "33m 48.5s"
 
 
 def test_frontmatter_round_trip_preserves_course_page_fields() -> None:
@@ -133,7 +154,7 @@ def test_build_provider_passes_timeout_settings(settings) -> None:
 
     assert provider is not None
     assert provider.name == "gemini"
-    assert getattr(provider, "timeout_ms") == 12345
+    assert provider.timeout_ms == 12345
 
 
 def test_notebook_adapter_extracts_markdown_and_code(settings) -> None:
@@ -288,7 +309,9 @@ def test_provider_layout_paths_are_normalized_to_course_tree(settings) -> None:
     )
 
     by_slug = {page.slug: page for page in review.pages}
-    assert by_slug["core-concepts"].target_path == "wiki/courses/y1s1/cs1231s/topics/core-concepts.md"
+    assert (
+        by_slug["core-concepts"].target_path == "wiki/courses/y1s1/cs1231s/topics/core-concepts.md"
+    )
     assert by_slug["core-concepts"].parent_slug == "hub"
 
 
@@ -832,7 +855,9 @@ def test_lecture_flat_layout_filters_exam_preparation_topics(settings) -> None:
     assert [page.slug for page in kept] == ["tutorial-01-supporting-notes"]
 
 
-def test_pdf_source_falls_back_when_provider_returns_invalid_argument(settings, monkeypatch) -> None:
+def test_pdf_source_falls_back_when_provider_returns_invalid_argument(
+    settings, monkeypatch
+) -> None:
     class InvalidArgumentProvider(LLMProvider):
         supports_file_inputs = True
 
@@ -846,9 +871,13 @@ def test_pdf_source_falls_back_when_provider_returns_invalid_argument(settings, 
             files: list[Path],
             system_prompt: str | None = None,
         ) -> GenerationResult:
-            raise ProviderError("Gemini request failed: 400 INVALID_ARGUMENT. Request contains an invalid argument.")
+            raise ProviderError(
+                "Gemini request failed: 400 INVALID_ARGUMENT. Request contains an invalid argument."
+            )
 
-    monkeypatch.setattr("knowledge_wiki.sources.pdf._extract_pdf_text", lambda path: "Recovered local PDF text")
+    monkeypatch.setattr(
+        "knowledge_wiki.sources.pdf._extract_pdf_text", lambda path: "Recovered local PDF text"
+    )
 
     source_path = settings.raw_dir / "textbook.pdf"
     source_path.write_bytes(b"%PDF-1.4")
@@ -865,7 +894,9 @@ def test_pdf_source_falls_back_when_provider_returns_invalid_argument(settings, 
         updated_at=utc_now(),
     )
 
-    extracted = IngestWorkflow(settings, provider=InvalidArgumentProvider())._extract_manifest(manifest)
+    extracted = IngestWorkflow(settings, provider=InvalidArgumentProvider())._extract_manifest(
+        manifest
+    )
 
     assert extracted.title == "Textbook"
     assert "Recovered local PDF text" in extracted.text
@@ -896,12 +927,16 @@ def test_large_pdf_fallback_requires_pypdf(settings, monkeypatch) -> None:
 
 
 def test_extract_json_object_sanitizes_invalid_backslash_escapes() -> None:
-    payload = extract_json_object('{"title":"Example","sections":[{"heading":"Overview","text":"Profit \\q Loss"}]}')
+    payload = extract_json_object(
+        '{"title":"Example","sections":[{"heading":"Overview","text":"Profit \\q Loss"}]}'
+    )
 
     assert payload["sections"][0]["text"] == "Profit \\q Loss"
 
 
-def test_office_source_falls_back_when_provider_rejects_unsupported_mime(settings, monkeypatch) -> None:
+def test_office_source_falls_back_when_provider_rejects_unsupported_mime(
+    settings, monkeypatch
+) -> None:
     class MimeRejectingProvider(LLMProvider):
         supports_file_inputs = True
 
@@ -915,7 +950,9 @@ def test_office_source_falls_back_when_provider_rejects_unsupported_mime(setting
             files: list[Path],
             system_prompt: str | None = None,
         ) -> GenerationResult:
-            raise ProviderError("Gemini request failed: 400 INVALID_ARGUMENT. Unsupported MIME type: application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            raise ProviderError(
+                "Gemini request failed: 400 INVALID_ARGUMENT. Unsupported MIME type: application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
 
     class Result:
         def __init__(self, returncode: int, stdout: str) -> None:
@@ -944,7 +981,9 @@ def test_office_source_falls_back_when_provider_rejects_unsupported_mime(setting
         updated_at=utc_now(),
     )
 
-    extracted = IngestWorkflow(settings, provider=MimeRejectingProvider())._extract_manifest(manifest)
+    extracted = IngestWorkflow(settings, provider=MimeRejectingProvider())._extract_manifest(
+        manifest
+    )
 
     assert "Office fallback content" in extracted.text
     assert manifest.extractor_metadata["provider_file_input"] is False
@@ -999,7 +1038,9 @@ def test_search_catalog_prefers_relevant_passage_over_first_stopword_match() -> 
         )
     ]
 
-    hits = search_catalog(entries, "What is Cash Flows from Operations, indirect method", max_results=5)
+    hits = search_catalog(
+        entries, "What is Cash Flows from Operations, indirect method", max_results=5
+    )
 
     assert hits
     assert "indirect method" in hits[0].snippet.lower()
@@ -1166,7 +1207,9 @@ def test_gemini_provider_supports_text_and_file_inputs(monkeypatch, tmp_path: Pa
             self.files = fake_files
             self.models = fake_models
 
-    monkeypatch.setattr("knowledge_wiki.providers.gemini.genai", type("FakeGenai", (), {"Client": FakeClient}))
+    monkeypatch.setattr(
+        "knowledge_wiki.providers.gemini.genai", type("FakeGenai", (), {"Client": FakeClient})
+    )
 
     root = tmp_path / "repo"
     root.mkdir()
@@ -1182,7 +1225,9 @@ def test_gemini_provider_supports_text_and_file_inputs(monkeypatch, tmp_path: Pa
     assert provider is not None
 
     text_result = provider.generate("hello", system_prompt="system")
-    file_result = provider.generate_with_files("summarize", files=[file_path], system_prompt="system")
+    file_result = provider.generate_with_files(
+        "summarize", files=[file_path], system_prompt="system"
+    )
 
     assert text_result.text == "Gemini output"
     assert file_result.text == "Gemini output"

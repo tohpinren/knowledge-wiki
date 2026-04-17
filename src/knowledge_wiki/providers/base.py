@@ -5,7 +5,6 @@ from pathlib import Path
 
 from ..models import GenerationResult, GenerationUsage
 
-
 MODEL_PRICING_USD_PER_1M_TOKENS: dict[tuple[str, str], tuple[float, float]] = {
     ("gemini", "gemini-2.5-flash-lite"): (0.10, 0.40),
     ("gemini", "gemini-2.5-flash"): (0.30, 2.50),

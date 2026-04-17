@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
@@ -18,8 +17,7 @@ if str(SRC_ROOT) not in sys.path:
 from knowledge_wiki.bootstrap import bootstrap_repository
 from knowledge_wiki.config import Settings
 from knowledge_wiki.models import ExtractedSource, GenerationResult, SourceManifest, SourceSection
-from knowledge_wiki.providers.base import LLMProvider
-from knowledge_wiki.providers.base import ProviderError
+from knowledge_wiki.providers.base import LLMProvider, ProviderError
 from knowledge_wiki.sources.base import SourceAdapter, SourceRegistry
 
 
@@ -36,10 +34,14 @@ class ScriptedCourseProvider(LLMProvider):
         self.calls.append((prompt, system_prompt))
         if "SOURCE_SUMMARY_REQUEST" in prompt:
             title = _match_line(prompt, "Title") or "Source"
-            return GenerationResult(text=f"{title} is a course source that contributes usable evidence.")
+            return GenerationResult(
+                text=f"{title} is a course source that contributes usable evidence."
+            )
         if "LAYOUT_PLAN_REQUEST" in prompt:
             if self.invalid_layout:
-                return GenerationResult(text='{"pages":[{"title":"Broken","slug":"hub","page_kind":"topic","target_path":"wiki/outside.md","summary":"bad","parent_slug":"","related_page_ids":[],"assigned_source_refs":[],"rationale":"invalid"}]}')
+                return GenerationResult(
+                    text='{"pages":[{"title":"Broken","slug":"hub","page_kind":"topic","target_path":"wiki/outside.md","summary":"bad","parent_slug":"","related_page_ids":[],"assigned_source_refs":[],"rationale":"invalid"}]}'
+                )
             return GenerationResult(text=self._layout_response(prompt))
         if "DRAFT_PAGE_REQUEST" in prompt:
             return GenerationResult(text=self._draft_response(prompt))
@@ -59,7 +61,9 @@ class ScriptedCourseProvider(LLMProvider):
         if "Answer the question using only the provided wiki page evidence." in prompt:
             refs = re.findall(r"\[source:([A-Za-z0-9_-]+#[A-Za-z0-9_-]+)\]", prompt)
             citation = f"[source:{refs[0]}]" if refs else ""
-            return GenerationResult(text=f"## Provider Summary\n\nCompiled answer grounded in the wiki {citation}".strip())
+            return GenerationResult(
+                text=f"## Provider Summary\n\nCompiled answer grounded in the wiki {citation}".strip()
+            )
         return GenerationResult(text="Fallback provider response.")
 
     def generate_with_files(
@@ -73,7 +77,9 @@ class ScriptedCourseProvider(LLMProvider):
         if "DRAFT_PAGE_REQUEST" in prompt:
             return GenerationResult(text=self._draft_response(prompt))
         if "FILE_EXTRACTION_REQUEST" not in prompt or not files:
-            return GenerationResult(text='{"title":"Uploaded File","sections":[{"heading":"Overview","text":"Uploaded file content."}]}')
+            return GenerationResult(
+                text='{"title":"Uploaded File","sections":[{"heading":"Overview","text":"Uploaded file content."}]}'
+            )
 
         file_path = files[0]
         title = file_path.stem.replace("-", " ").replace("_", " ").title()
@@ -84,7 +90,8 @@ class ScriptedCourseProvider(LLMProvider):
             "sections": [
                 {
                     "heading": "Overview",
-                    "text": extracted_text or f"{title} captures course material extracted from the uploaded {suffix} file.",
+                    "text": extracted_text
+                    or f"{title} captures course material extracted from the uploaded {suffix} file.",
                 },
                 {
                     "heading": "Key Topics",
@@ -134,9 +141,7 @@ class ScriptedCourseProvider(LLMProvider):
         citation = f"[source:{refs[0]}]" if refs else ""
         second = f"[source:{refs[1]}]" if len(refs) > 1 else citation
         revision_block = (
-            f"\n## Revision Notes\n\nApplied reviewer feedback: {feedback}\n"
-            if feedback
-            else ""
+            f"\n## Revision Notes\n\nApplied reviewer feedback: {feedback}\n" if feedback else ""
         )
         return (
             f"## Overview\n\n{title} synthesizes the assigned course evidence {citation}.\n\n"
@@ -147,10 +152,7 @@ class ScriptedCourseProvider(LLMProvider):
     def _revised_page_response(self, prompt: str) -> str:
         title = _match_line(prompt, "Page title") or "Untitled"
         feedback = _extract_feedback(prompt) or "review requested"
-        return (
-            f"# {title}\n\n"
-            f"## Revised Page\n\nApplied reviewer feedback: {feedback}\n"
-        )
+        return f"# {title}\n\n## Revised Page\n\nApplied reviewer feedback: {feedback}\n"
 
 
 class ParallelTrackingProvider(ScriptedCourseProvider):
@@ -253,10 +255,7 @@ def sleeping_text_registry() -> tuple[SourceRegistry, SleepingTextAdapter]:
 
 def write_text_pdf(path: Path, text: str) -> None:
     escaped = (
-        text.replace("\\", "\\\\")
-        .replace("(", "\\(")
-        .replace(")", "\\)")
-        .replace("\n", "\\n")
+        text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)").replace("\n", "\\n")
     )
     stream = f"BT /F1 12 Tf 72 720 Td ({escaped}) Tj ET"
     objects = [
@@ -277,14 +276,19 @@ def write_text_pdf(path: Path, text: str) -> None:
     xref = [b"xref\n0 6\n0000000000 65535 f \n"]
     for offset in offsets[1:]:
         xref.append(f"{offset:010d} 00000 n \n".encode("ascii"))
-    trailer = f"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
+    trailer = f"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode(
+        "ascii"
+    )
     path.write_bytes(b"".join(parts + xref + [trailer]))
 
 
 def write_notebook(path: Path) -> None:
     payload = {
         "cells": [
-            {"cell_type": "markdown", "source": ["# Notebook Title\n", "Graphs and proofs connect ideas.\n"]},
+            {
+                "cell_type": "markdown",
+                "source": ["# Notebook Title\n", "Graphs and proofs connect ideas.\n"],
+            },
             {"cell_type": "code", "source": ["def prove():\n", "    return True\n"]},
         ],
         "metadata": {},
@@ -324,6 +328,32 @@ def _extract_section(prompt: str, heading: str) -> str:
 
 
 def _read_provider_fixture_text(path: Path) -> str:
-    if path.suffix.lower() in {".md", ".txt", ".html", ".htm", ".py", ".java", ".c", ".cpp", ".h", ".hpp", ".js", ".ts", ".tsx", ".go", ".rs", ".sql", ".sh", ".scala", ".r", ".m", ".json", ".yaml", ".yml", ".toml", ".ipynb"}:
+    if path.suffix.lower() in {
+        ".md",
+        ".txt",
+        ".html",
+        ".htm",
+        ".py",
+        ".java",
+        ".c",
+        ".cpp",
+        ".h",
+        ".hpp",
+        ".js",
+        ".ts",
+        ".tsx",
+        ".go",
+        ".rs",
+        ".sql",
+        ".sh",
+        ".scala",
+        ".r",
+        ".m",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".ipynb",
+    }:
         return path.read_text(encoding="utf-8", errors="ignore").strip()
     return ""

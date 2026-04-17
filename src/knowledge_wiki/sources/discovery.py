@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-
 IGNORE_DIR_NAMES = {
     ".git",
     ".hg",
@@ -74,11 +73,7 @@ def discover_course_files(root_path: Path) -> tuple[list[DiscoveredFile], list[D
 
     for root_str, dirnames, filenames in os.walk(root_path):
         current_root = Path(root_str)
-        dirnames[:] = [
-            dirname
-            for dirname in dirnames
-            if not _should_ignore_dir(Path(dirname))
-        ]
+        dirnames[:] = [dirname for dirname in dirnames if not _should_ignore_dir(Path(dirname))]
         for filename in sorted(filenames):
             file_path = current_root / filename
             relative_path = file_path.relative_to(root_path)
@@ -96,12 +91,32 @@ def discover_course_files(root_path: Path) -> tuple[list[DiscoveredFile], list[D
 def classify_path(path: Path, *, relative_path: Path | None = None) -> DiscoveredFile:
     relative = relative_path or path.name
     if path.name in IGNORE_FILE_NAMES or path.name.startswith("."):
-        return DiscoveredFile(path=path, relative_path=Path(relative), kind="", content_class="", usable=False, skip_reason="ignored_file")
+        return DiscoveredFile(
+            path=path,
+            relative_path=Path(relative),
+            kind="",
+            content_class="",
+            usable=False,
+            skip_reason="ignored_file",
+        )
     suffix = path.suffix.lower()
     if suffix in CLASSIFICATION_MAP:
         kind, content_class = CLASSIFICATION_MAP[suffix]
-        return DiscoveredFile(path=path, relative_path=Path(relative), kind=kind, content_class=content_class, usable=True)
-    return DiscoveredFile(path=path, relative_path=Path(relative), kind="", content_class="", usable=False, skip_reason="unsupported_extension")
+        return DiscoveredFile(
+            path=path,
+            relative_path=Path(relative),
+            kind=kind,
+            content_class=content_class,
+            usable=True,
+        )
+    return DiscoveredFile(
+        path=path,
+        relative_path=Path(relative),
+        kind="",
+        content_class="",
+        usable=False,
+        skip_reason="unsupported_extension",
+    )
 
 
 def _should_ignore_dir(path: Path) -> bool:

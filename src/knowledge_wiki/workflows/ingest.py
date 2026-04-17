@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-import re
 from pathlib import Path
 from threading import Lock
 
@@ -41,8 +41,8 @@ from ..wiki.provenance import build_source_ref, render_citation
 from .common import (
     append_log,
     infer_page_type,
-    list_evidence_artifacts,
     ingest_metrics_path,
+    list_evidence_artifacts,
     list_source_manifests,
     regenerate_system_index,
     save_draft,
@@ -128,7 +128,9 @@ class IngestWorkflow:
         try:
             relative_path = source_path.relative_to(self.settings.root_dir)
         except ValueError as exc:
-            raise ValueError("Source path must live inside the repository root, typically under raw/.") from exc
+            raise ValueError(
+                "Source path must live inside the repository root, typically under raw/."
+            ) from exc
 
         existing_ids = {manifest.source_id for manifest in list_source_manifests(self.settings)}
         base_name = title or source_path.stem
@@ -149,7 +151,9 @@ class IngestWorkflow:
         )
         save_source_manifest(self.settings, manifest)
         regenerate_system_index(self.settings)
-        append_log(self.settings, f"registered source `{manifest.source_id}` from `{manifest.file_path}`.")
+        append_log(
+            self.settings, f"registered source `{manifest.source_id}` from `{manifest.file_path}`."
+        )
         return manifest
 
     def ingest(self, *, source_ids: list[str] | None = None) -> list[DraftProposal]:
@@ -160,7 +164,11 @@ class IngestWorkflow:
             wanted = set(source_ids)
             manifests = [manifest for manifest in manifests if manifest.source_id in wanted]
         else:
-            manifests = [manifest for manifest in manifests if manifest.ingest_status in {"registered", "pending"}]
+            manifests = [
+                manifest
+                for manifest in manifests
+                if manifest.ingest_status in {"registered", "pending"}
+            ]
 
         proposals: list[DraftProposal] = []
         if not manifests:
@@ -168,9 +176,16 @@ class IngestWorkflow:
             return proposals
 
         worker_count = self._worker_count(len(manifests))
-        self._progress(f"Preparing {len(manifests)} source(s) for drafting with concurrency={worker_count}.")
+        self._progress(
+            f"Preparing {len(manifests)} source(s) for drafting with concurrency={worker_count}."
+        )
         results = self._run_in_parallel(
-            [lambda index=index, manifest=manifest: self._build_source_draft_result(index, manifest) for index, manifest in enumerate(manifests, start=1)],
+            [
+                lambda index=index, manifest=manifest: self._build_source_draft_result(
+                    index, manifest
+                )
+                for index, manifest in enumerate(manifests, start=1)
+            ],
             max_workers=worker_count,
         )
         total = len(manifests)
@@ -184,7 +199,9 @@ class IngestWorkflow:
                 manifest.skip_reason = result.error
                 manifest.updated_at = utc_now()
                 save_source_manifest(self.settings, manifest)
-                self._progress(f"[{result.index}/{total}] Failed to ingest {manifest.file_path}: {result.error}")
+                self._progress(
+                    f"[{result.index}/{total}] Failed to ingest {manifest.file_path}: {result.error}"
+                )
                 continue
             proposal = result.proposal
             manifest.extract_status = "extracted"
@@ -214,14 +231,20 @@ class IngestWorkflow:
         self._require_extraction_provider()
         course_root = Path(path).resolve()
         if not course_root.exists() or not course_root.is_dir():
-            raise FileNotFoundError(f"Course path does not exist or is not a directory: {course_root}")
+            raise FileNotFoundError(
+                f"Course path does not exist or is not a directory: {course_root}"
+            )
         try:
             relative_root = course_root.relative_to(self.settings.root_dir)
         except ValueError as exc:
-            raise ValueError("Course path must live inside the repository root, typically under raw/.") from exc
+            raise ValueError(
+                "Course path must live inside the repository root, typically under raw/."
+            ) from exc
 
         self._progress(f"Discovering supported files under {relative_root.as_posix()}.")
-        derived_term, derived_module = self._derive_course_identity(course_root, term=term, module_code=module_code)
+        derived_term, derived_module = self._derive_course_identity(
+            course_root, term=term, module_code=module_code
+        )
         module_id = slugify(f"{derived_term}-{derived_module}")
         batch_id = f"{module_id}-{timestamp_slug().lower()}"
         usable, skipped = discover_course_files(course_root)
@@ -248,7 +271,8 @@ class IngestWorkflow:
         evidence_artifacts: list[EvidenceArtifact] = []
         failed_extracts: list[dict[str, str]] = []
         prior_source_manifests = {
-            item.source_id: item for item in list_source_manifests(self.settings, module_id=module_id)
+            item.source_id: item
+            for item in list_source_manifests(self.settings, module_id=module_id)
         }
         prior_evidence_artifacts = self._latest_evidence_artifacts_by_source_id(module_id)
 
@@ -283,9 +307,11 @@ class IngestWorkflow:
                 reuse_results.append(reused_failure)
                 continue
             extraction_tasks.append(
-                lambda index=index, source_manifest=source_manifest: self._extract_course_source_result(
-                    index=index,
-                    source_manifest=source_manifest,
+                lambda index=index, source_manifest=source_manifest: (
+                    self._extract_course_source_result(
+                        index=index,
+                        source_manifest=source_manifest,
+                    )
                 )
             )
 
@@ -337,7 +363,9 @@ class IngestWorkflow:
                     f"from {result.reused_from_evidence_id}."
                 )
             else:
-                self._progress(f"[{result.index}/{total_usable}] Saved evidence {result.artifact.evidence_id}.")
+                self._progress(
+                    f"[{result.index}/{total_usable}] Saved evidence {result.artifact.evidence_id}."
+                )
 
         for result in self._iter_in_parallel(
             extraction_tasks,
@@ -380,11 +408,12 @@ class IngestWorkflow:
                     f"from {result.reused_from_evidence_id}."
                 )
             else:
-                self._progress(f"[{result.index}/{total_usable}] Saved evidence {result.artifact.evidence_id}.")
+                self._progress(
+                    f"[{result.index}/{total_usable}] Saved evidence {result.artifact.evidence_id}."
+                )
 
         all_skipped = [
-            {"path": item.relative_path.as_posix(), "reason": item.skip_reason}
-            for item in skipped
+            {"path": item.relative_path.as_posix(), "reason": item.skip_reason} for item in skipped
         ] + failed_extracts
         reused_count = sum(1 for result in extraction_results if result.reused)
 
@@ -401,11 +430,16 @@ class IngestWorkflow:
             manifest.layout_review_state = "rejected"
             manifest.draft_review_state = "blocked"
             manifest.updated_at = utc_now()
-            manifest.metadata["provider_error"] = "No supported source files were discovered in the course directory."
+            manifest.metadata["provider_error"] = (
+                "No supported source files were discovered in the course directory."
+            )
             self._persist_usage_metrics(manifest)
             save_module_manifest(self.settings, manifest)
             regenerate_system_index(self.settings)
-            append_log(self.settings, f"course `{module_id}` batch `{batch_id}` had no supported source files to ingest. {self._usage_summary_line()}".strip())
+            append_log(
+                self.settings,
+                f"course `{module_id}` batch `{batch_id}` had no supported source files to ingest. {self._usage_summary_line()}".strip(),
+            )
             self._progress(f"No supported source files were discovered for {module_id}.")
             return CourseIngestResult(
                 module_manifest=manifest,
@@ -415,11 +449,17 @@ class IngestWorkflow:
             )
 
         if usable and not evidence_artifacts:
-            manifest.status = "provider_failed" if self._looks_like_provider_failure(failed_extracts) else "layout_invalid"
+            manifest.status = (
+                "provider_failed"
+                if self._looks_like_provider_failure(failed_extracts)
+                else "layout_invalid"
+            )
             manifest.layout_review_state = "rejected"
             manifest.draft_review_state = "blocked"
             manifest.updated_at = utc_now()
-            manifest.metadata["provider_error"] = _first_error_message(failed_extracts) or "All extractions failed."
+            manifest.metadata["provider_error"] = (
+                _first_error_message(failed_extracts) or "All extractions failed."
+            )
             self._persist_usage_metrics(manifest)
             save_module_manifest(self.settings, manifest)
             regenerate_system_index(self.settings)
@@ -444,7 +484,11 @@ class IngestWorkflow:
                 nearby_pages=nearby_pages,
             )
         except Exception as exc:
-            manifest.status = "provider_failed" if self._looks_like_provider_failure_message(str(exc)) else "layout_invalid"
+            manifest.status = (
+                "provider_failed"
+                if self._looks_like_provider_failure_message(str(exc))
+                else "layout_invalid"
+            )
             manifest.layout_review_state = "rejected"
             manifest.draft_review_state = "blocked"
             manifest.updated_at = utc_now()
@@ -476,7 +520,9 @@ class IngestWorkflow:
         for proposal in draft_proposals:
             save_draft(self.settings, proposal)
 
-        for source_manifest in list_source_manifests(self.settings, module_id=module_id, batch_id=batch_id):
+        for source_manifest in list_source_manifests(
+            self.settings, module_id=module_id, batch_id=batch_id
+        ):
             if source_manifest.extract_status == "extracted":
                 source_manifest.ingest_status = "drafted"
                 source_manifest.updated_at = utc_now()
@@ -509,10 +555,15 @@ class IngestWorkflow:
     def _build_single_source_draft(self, extracted: ExtractedSource) -> DraftProposal:
         self._progress(f"Summarizing {extracted.title}.")
         page_type = infer_page_type(extracted.manifest.scope)
-        target_path = build_page_path(self.settings.root_dir, title=extracted.title, page_type=page_type)
+        target_path = build_page_path(
+            self.settings.root_dir, title=extracted.title, page_type=page_type
+        )
         proposal_type = "patch_page" if target_path.exists() else "create_page"
         summary = self._build_summary(extracted)
-        source_refs = [build_source_ref(extracted.manifest.source_id, section.section_id) for section in extracted.sections]
+        source_refs = [
+            build_source_ref(extracted.manifest.source_id, section.section_id)
+            for section in extracted.sections
+        ]
         page = WikiPage(
             page_id=slugify(extracted.title),
             title=extracted.title,
@@ -525,7 +576,8 @@ class IngestWorkflow:
             source_refs=source_refs,
             topics=top_terms(extracted.text, limit=8),
             source_count=1 if source_refs else 0,
-            lecture_number=self._lecture_number_from_text(extracted.title) or self._lecture_number_from_text(extracted.manifest.file_path),
+            lecture_number=self._lecture_number_from_text(extracted.title)
+            or self._lecture_number_from_text(extracted.manifest.file_path),
             last_compiled_at=utc_now(),
             body=self._build_source_body(extracted, summary),
             page_kind="source",
@@ -599,7 +651,9 @@ class IngestWorkflow:
             metadata={"module_code": module_code, "term": term},
         )
 
-    def _latest_evidence_artifacts_by_source_id(self, module_id: str) -> dict[str, EvidenceArtifact]:
+    def _latest_evidence_artifacts_by_source_id(
+        self, module_id: str
+    ) -> dict[str, EvidenceArtifact]:
         latest: dict[str, EvidenceArtifact] = {}
         for artifact in list_evidence_artifacts(self.settings, module_id=module_id):
             current = latest.get(artifact.source_id)
@@ -615,7 +669,9 @@ class IngestWorkflow:
         previous_manifest: SourceManifest | None,
         previous_artifact: EvidenceArtifact | None,
     ) -> _CourseExtractionResult | None:
-        if not self._can_reuse_course_evidence(source_manifest, previous_manifest, previous_artifact):
+        if not self._can_reuse_course_evidence(
+            source_manifest, previous_manifest, previous_artifact
+        ):
             return None
         artifact = self._clone_evidence_artifact_for_batch(
             previous_artifact,
@@ -628,7 +684,9 @@ class IngestWorkflow:
             source_manifest,
             provider_file_input=bool(source_manifest.extractor_metadata.get("provider_file_input")),
         )
-        source_manifest.extractor_metadata["reused_from_evidence_id"] = previous_artifact.evidence_id
+        source_manifest.extractor_metadata["reused_from_evidence_id"] = (
+            previous_artifact.evidence_id
+        )
         source_manifest.extractor_metadata["reused_from_batch_id"] = previous_artifact.batch_id
         source_manifest.metadata["reused_from_batch_id"] = previous_artifact.batch_id
         return _CourseExtractionResult(
@@ -701,7 +759,9 @@ class IngestWorkflow:
             return True
         expected_signature = self._evidence_reuse_signature(
             source_manifest,
-            provider_file_input=bool(previous_manifest.extractor_metadata.get("provider_file_input")),
+            provider_file_input=bool(
+                previous_manifest.extractor_metadata.get("provider_file_input")
+            ),
         )
         return previous_signature == expected_signature
 
@@ -757,10 +817,15 @@ class IngestWorkflow:
     ) -> EvidenceArtifact:
         self._progress(f"Summarizing evidence for {extracted.title}.")
         summary = self._build_summary(extracted, evidence_mode=True)
-        source_refs = [build_source_ref(extracted.manifest.source_id, section.section_id) for section in extracted.sections]
+        source_refs = [
+            build_source_ref(extracted.manifest.source_id, section.section_id)
+            for section in extracted.sections
+        ]
         reuse_signature = self._evidence_reuse_signature(
             extracted.manifest,
-            provider_file_input=bool(extracted.manifest.extractor_metadata.get("provider_file_input")),
+            provider_file_input=bool(
+                extracted.manifest.extractor_metadata.get("provider_file_input")
+            ),
         )
         return EvidenceArtifact(
             evidence_id=f"{batch_id}--{extracted.manifest.source_id}",
@@ -793,7 +858,9 @@ class IngestWorkflow:
         feedback: str | None = None,
         previous_layout: LayoutReview | None = None,
     ) -> LayoutReview:
-        all_source_refs = sorted({ref for artifact in evidence_artifacts for ref in artifact.source_refs})
+        all_source_refs = sorted(
+            {ref for artifact in evidence_artifacts for ref in artifact.source_refs}
+        )
         source_ref_aliases = self._source_ref_aliases(evidence_artifacts)
         lecture_strategy = self._lecture_layout_strategy(evidence_artifacts)
         deterministic_pages = self._deterministic_layout_pages(
@@ -867,8 +934,7 @@ class IngestWorkflow:
                 "term": module_manifest.term,
                 "layout_strategy": lecture_strategy["strategy"],
                 "lecture_pages": [
-                    {"slug": page.slug, "title": page.title}
-                    for page in lecture_strategy["pages"]
+                    {"slug": page.slug, "title": page.title} for page in lecture_strategy["pages"]
                 ],
                 "nearby_pages": [
                     {
@@ -919,7 +985,9 @@ class IngestWorkflow:
         pages.extend(lecture_pages)
         return pages
 
-    def _lecture_layout_strategy(self, evidence_artifacts: list[EvidenceArtifact]) -> dict[str, object]:
+    def _lecture_layout_strategy(
+        self, evidence_artifacts: list[EvidenceArtifact]
+    ) -> dict[str, object]:
         grouped: dict[int, list[EvidenceArtifact]] = {}
         for artifact in evidence_artifacts:
             lecture_number = self._lecture_number_for_artifact(artifact)
@@ -960,7 +1028,9 @@ class IngestWorkflow:
     def _lecture_number_for_artifact(self, artifact: EvidenceArtifact) -> int | None:
         relpath = str(artifact.metadata.get("module_relpath", ""))
         title = str(artifact.metadata.get("title", artifact.source_id))
-        in_lecture_dir = any(segment.lower() in {"lecture", "lectures"} for segment in Path(relpath).parts)
+        in_lecture_dir = any(
+            segment.lower() in {"lecture", "lectures"} for segment in Path(relpath).parts
+        )
         if not in_lecture_dir and "lecture" not in title.lower():
             return None
         match = re.search(
@@ -1041,8 +1111,7 @@ class IngestWorkflow:
                 f"topics={', '.join(artifact.key_topics[:6])} :: summary={artifact.summary}"
             )
         nearby_lines = [
-            f"- {entry.page_id} :: {entry.title} :: {entry.summary}"
-            for entry in nearby_pages[:10]
+            f"- {entry.page_id} :: {entry.title} :: {entry.summary}" for entry in nearby_pages[:10]
         ]
         revision_lines: list[str] = []
         if previous_layout:
@@ -1071,18 +1140,15 @@ class IngestWorkflow:
                     "Recommended lecture pages (already planned deterministically):",
                 ]
             )
-            lecture_lines.extend(
-                f"- {page.slug} :: {page.title}"
-                for page in lecture_pages
-            )
+            lecture_lines.extend(f"- {page.slug} :: {page.title}" for page in lecture_pages)
         prompt = "\n".join(
             [
                 "LAYOUT_PLAN_REQUEST",
                 "Return JSON only.",
                 "Provide only additional course child pages. Do not include the mandatory hub page.",
-                "Schema: {\"pages\": [{\"title\": str, \"slug\": str, \"page_kind\": \"topic\", "
-                "\"target_path\": str, \"summary\": str, \"parent_slug\": str, "
-                "\"related_page_ids\": [str], \"assigned_source_refs\": [str], \"rationale\": str}]}",
+                'Schema: {"pages": [{"title": str, "slug": str, "page_kind": "topic", '
+                '"target_path": str, "summary": str, "parent_slug": str, '
+                '"related_page_ids": [str], "assigned_source_refs": [str], "rationale": str}]}',
                 f"Course term: {module_manifest.term}",
                 f"Course module: {module_manifest.module_code}",
                 f"Course module root: {module_root}",
@@ -1101,7 +1167,10 @@ class IngestWorkflow:
                 *revision_lines,
             ]
         )
-        result = self.provider.generate(prompt, system_prompt="You design a compact, reviewable wiki tree for a university course module.")
+        result = self.provider.generate(
+            prompt,
+            system_prompt="You design a compact, reviewable wiki tree for a university course module.",
+        )
         self._record_generation_usage(
             "layout_planning",
             result,
@@ -1134,18 +1203,22 @@ class IngestWorkflow:
             if page.page_kind == "artifact":
                 continue
             label = " ".join([page.slug, page.title, page.summary, page.rationale]).lower()
-            if lecture_strategy.get("strategy") == "lecture-flat" and page.page_kind == "topic" and any(
-                token in label
-                for token in (
-                    "exam preparation",
-                    "final exam",
-                    "midterm",
-                    "mock exam",
-                    "mock final",
-                    "past paper",
-                    "revision",
-                    "study guide",
-                    "practice exam",
+            if (
+                lecture_strategy.get("strategy") == "lecture-flat"
+                and page.page_kind == "topic"
+                and any(
+                    token in label
+                    for token in (
+                        "exam preparation",
+                        "final exam",
+                        "midterm",
+                        "mock exam",
+                        "mock final",
+                        "past paper",
+                        "revision",
+                        "study guide",
+                        "practice exam",
+                    )
                 )
             ):
                 continue
@@ -1250,7 +1323,9 @@ class IngestWorkflow:
             )[:4]
         ]
         if not selected_artifacts:
-            selected_artifacts = sorted(evidence_artifacts, key=lambda artifact: artifact.source_id)[:3]
+            selected_artifacts = sorted(
+                evidence_artifacts, key=lambda artifact: artifact.source_id
+            )[:3]
         refs: list[str] = []
         seen_refs: set[str] = set()
         for artifact in selected_artifacts:
@@ -1313,17 +1388,27 @@ class IngestWorkflow:
             if page.page_kind == "artifact" and "/artifacts/" not in page.target_path:
                 raise ValueError("Artifact pages must live under artifacts/.")
             if not page.assigned_source_refs:
-                raise ValueError(f"Layout page `{page.slug}` must reference at least one source ref.")
-            unknown_refs = [ref for ref in page.assigned_source_refs if ref not in known_source_refs]
+                raise ValueError(
+                    f"Layout page `{page.slug}` must reference at least one source ref."
+                )
+            unknown_refs = [
+                ref for ref in page.assigned_source_refs if ref not in known_source_refs
+            ]
             if unknown_refs:
-                raise ValueError(f"Layout page `{page.slug}` referenced unknown source refs: {', '.join(unknown_refs)}")
+                raise ValueError(
+                    f"Layout page `{page.slug}` referenced unknown source refs: {', '.join(unknown_refs)}"
+                )
             unknown_related = [ref for ref in page.related_page_ids if ref not in nearby_page_ids]
             if unknown_related:
-                raise ValueError(f"Layout page `{page.slug}` referenced unknown related page_ids: {', '.join(unknown_related)}")
+                raise ValueError(
+                    f"Layout page `{page.slug}` referenced unknown related page_ids: {', '.join(unknown_related)}"
+                )
 
         for page in pages:
             if page.parent_slug and page.parent_slug not in slugs:
-                raise ValueError(f"Layout page `{page.slug}` references unknown parent slug `{page.parent_slug}`.")
+                raise ValueError(
+                    f"Layout page `{page.slug}` references unknown parent slug `{page.parent_slug}`."
+                )
         return pages
 
     def _draft_course_pages(
@@ -1337,7 +1422,10 @@ class IngestWorkflow:
         existing_drafts: dict[str, DraftProposal] | None = None,
     ) -> list[DraftProposal]:
         artifacts_by_ref = self._evidence_by_source_ref(evidence_artifacts)
-        all_page_ids = {page.slug: self._module_page_id(module_manifest.module_id, page.slug) for page in layout_review.pages}
+        all_page_ids = {
+            page.slug: self._module_page_id(module_manifest.module_id, page.slug)
+            for page in layout_review.pages
+        }
         proposals: list[DraftProposal] = []
         feedback_by_slug = feedback_by_slug or {}
         existing_drafts = existing_drafts or {}
@@ -1393,7 +1481,11 @@ class IngestWorkflow:
                     f"Page summary: {plan.summary}",
                     f"Parent slug: {plan.parent_slug or 'none'}",
                     "Planned sibling pages:",
-                    *[f"- {item.slug}: {item.title} ({item.page_kind})" for item in all_plans if item.slug != plan.slug],
+                    *[
+                        f"- {item.slug}: {item.title} ({item.page_kind})"
+                        for item in all_plans
+                        if item.slug != plan.slug
+                    ],
                     "",
                     "Assigned evidence:",
                     *[
@@ -1409,7 +1501,11 @@ class IngestWorkflow:
                         for entry in nearby_pages[:8]
                     ],
                     "",
-                    *(["Current draft markdown:", existing_markdown or "", ""] if existing_markdown else []),
+                    *(
+                        ["Current draft markdown:", existing_markdown or "", ""]
+                        if existing_markdown
+                        else []
+                    ),
                     *(["Reviewer feedback:", feedback or "", ""] if feedback else []),
                     "Use stable [source:...] citations exactly as provided when making factual claims.",
                     "Prefer cross-links inside the current course structure first.",
@@ -1498,7 +1594,9 @@ class IngestWorkflow:
             files.append(resolved)
         return files
 
-    def _nearby_existing_pages(self, module_id: str, term: str, evidence_artifacts: list[EvidenceArtifact]):
+    def _nearby_existing_pages(
+        self, module_id: str, term: str, evidence_artifacts: list[EvidenceArtifact]
+    ):
         catalog = build_catalog(self.settings)
         course_prefix = f"wiki/courses/{slugify(term)}/"
         topic_tokens = {slugify(term), slugify(module_id)}
@@ -1514,7 +1612,9 @@ class IngestWorkflow:
                 scored.append((score, entry))
         return [entry for _, entry in sorted(scored, key=lambda item: item[0], reverse=True)[:12]]
 
-    def _evidence_by_source_ref(self, artifacts: list[EvidenceArtifact]) -> dict[str, EvidenceArtifact]:
+    def _evidence_by_source_ref(
+        self, artifacts: list[EvidenceArtifact]
+    ) -> dict[str, EvidenceArtifact]:
         mapping: dict[str, EvidenceArtifact] = {}
         for artifact in artifacts:
             for ref in artifact.source_refs:
@@ -1538,7 +1638,9 @@ class IngestWorkflow:
             return selected
         return evidence_artifacts
 
-    def _render_inventory_body(self, module_manifest: ModuleManifest, evidence_artifacts: list[EvidenceArtifact]) -> str:
+    def _render_inventory_body(
+        self, module_manifest: ModuleManifest, evidence_artifacts: list[EvidenceArtifact]
+    ) -> str:
         metadata = module_manifest.metadata
         skipped_files = metadata.get("skipped_files", [])
         lines = [
@@ -1591,7 +1693,10 @@ class IngestWorkflow:
             f"Content:\n{compact_text(extracted.text, limit=2000)}"
         )
         try:
-            result = self.provider.generate(prompt, system_prompt="You compile concise evidence summaries for a university course wiki.")
+            result = self.provider.generate(
+                prompt,
+                system_prompt="You compile concise evidence summaries for a university course wiki.",
+            )
             self._record_generation_usage(
                 "evidence_summary",
                 result,
@@ -1630,7 +1735,9 @@ class IngestWorkflow:
             }
         )
 
-    def _topics_for_course_page(self, plan: LayoutPagePlan, artifacts: list[EvidenceArtifact]) -> list[str]:
+    def _topics_for_course_page(
+        self, plan: LayoutPagePlan, artifacts: list[EvidenceArtifact]
+    ) -> list[str]:
         topics: list[str] = []
         seen: set[str] = set()
         for artifact in artifacts:
@@ -1660,7 +1767,9 @@ class IngestWorkflow:
         return len({ref.split("#", maxsplit=1)[0] for ref in refs})
 
     def _lecture_number_for_plan(self, plan: LayoutPagePlan) -> int | None:
-        return self._lecture_number_from_text(plan.slug) or self._lecture_number_from_text(plan.title)
+        return self._lecture_number_from_text(plan.slug) or self._lecture_number_from_text(
+            plan.title
+        )
 
     def _lecture_number_from_text(self, value: str) -> int | None:
         match = re.search(r"(lecture|week|wk|l)\s*[-_ ]*(\d{1,2})", value, flags=re.IGNORECASE)
@@ -1721,9 +1830,13 @@ class IngestWorkflow:
             and manifest.kind in FILE_INPUT_SOURCE_KINDS
         )
 
-    def _evidence_reuse_signature(self, manifest: SourceManifest, *, provider_file_input: bool) -> str:
+    def _evidence_reuse_signature(
+        self, manifest: SourceManifest, *, provider_file_input: bool
+    ) -> str:
         provider_label = self.provider.label if self.provider else "no-provider"
-        extraction_mode = "provider_file_input" if provider_file_input else f"local_adapter:{manifest.kind}"
+        extraction_mode = (
+            "provider_file_input" if provider_file_input else f"local_adapter:{manifest.kind}"
+        )
         return "|".join(
             [
                 COURSE_EVIDENCE_REUSE_VERSION,
@@ -1799,7 +1912,9 @@ class IngestWorkflow:
             text = str(item.get("text") or "").strip()
             if not text:
                 continue
-            sections.append(SourceSection(section_id=f"section-{index}", heading=heading, text=text))
+            sections.append(
+                SourceSection(section_id=f"section-{index}", heading=heading, text=text)
+            )
         if not sections:
             raise ValueError("Provider file extraction returned only empty sections.")
         return ExtractedSource(
@@ -1853,7 +1968,9 @@ class IngestWorkflow:
             tracker.summary["calls"] = int(tracker.summary["calls"] or 0) + 1
             stage_bucket["calls"] = int(stage_bucket["calls"] or 0) + 1
             if usage is not None:
-                tracker.summary["calls_with_usage"] = int(tracker.summary["calls_with_usage"] or 0) + 1
+                tracker.summary["calls_with_usage"] = (
+                    int(tracker.summary["calls_with_usage"] or 0) + 1
+                )
                 stage_bucket["calls_with_usage"] = int(stage_bucket["calls_with_usage"] or 0) + 1
                 self._merge_usage_bucket(tracker.summary, usage)
                 self._merge_usage_bucket(stage_bucket, usage)
@@ -1873,9 +1990,21 @@ class IngestWorkflow:
         bucket["input_tokens"] = int(bucket["input_tokens"] or 0) + usage.input_tokens
         bucket["output_tokens"] = int(bucket["output_tokens"] or 0) + usage.output_tokens
         bucket["total_tokens"] = int(bucket["total_tokens"] or 0) + usage.total_tokens
-        bucket["estimated_input_cost_usd"] = round(float(bucket["estimated_input_cost_usd"] or 0.0) + float(usage.estimated_input_cost_usd or 0.0), 8)
-        bucket["estimated_output_cost_usd"] = round(float(bucket["estimated_output_cost_usd"] or 0.0) + float(usage.estimated_output_cost_usd or 0.0), 8)
-        bucket["estimated_total_cost_usd"] = round(float(bucket["estimated_total_cost_usd"] or 0.0) + float(usage.estimated_total_cost_usd or 0.0), 8)
+        bucket["estimated_input_cost_usd"] = round(
+            float(bucket["estimated_input_cost_usd"] or 0.0)
+            + float(usage.estimated_input_cost_usd or 0.0),
+            8,
+        )
+        bucket["estimated_output_cost_usd"] = round(
+            float(bucket["estimated_output_cost_usd"] or 0.0)
+            + float(usage.estimated_output_cost_usd or 0.0),
+            8,
+        )
+        bucket["estimated_total_cost_usd"] = round(
+            float(bucket["estimated_total_cost_usd"] or 0.0)
+            + float(usage.estimated_total_cost_usd or 0.0),
+            8,
+        )
 
     def _persist_usage_metrics(self, manifest: ModuleManifest) -> None:
         tracker = self._usage_tracker
@@ -1895,7 +2024,9 @@ class IngestWorkflow:
         save_ingest_metrics(self.settings, tracker.batch_id, payload)
         manifest.metadata["usage_summary"] = tracker.summary
         manifest.metadata["usage_by_stage"] = tracker.by_stage
-        manifest.metadata["usage_metrics_path"] = str(ingest_metrics_path(self.settings, tracker.batch_id).relative_to(self.settings.root_dir))
+        manifest.metadata["usage_metrics_path"] = str(
+            ingest_metrics_path(self.settings, tracker.batch_id).relative_to(self.settings.root_dir)
+        )
 
     def _usage_summary_line(self) -> str:
         tracker = self._usage_tracker
@@ -1908,7 +2039,9 @@ class IngestWorkflow:
     def _progress(self, message: str) -> None:
         self.progress(message)
 
-    def _build_source_draft_result(self, index: int, manifest: SourceManifest) -> _SourceDraftResult:
+    def _build_source_draft_result(
+        self, index: int, manifest: SourceManifest
+    ) -> _SourceDraftResult:
         self._progress(f"[{index}] Extracting {manifest.file_path}.")
         try:
             extracted = self._extract_manifest(manifest)
@@ -1933,7 +2066,9 @@ class IngestWorkflow:
                 batch_id=source_manifest.batch_id,
             )
         except Exception as exc:
-            return _CourseExtractionResult(index=index, source_manifest=source_manifest, error=str(exc))
+            return _CourseExtractionResult(
+                index=index, source_manifest=source_manifest, error=str(exc)
+            )
         return _CourseExtractionResult(
             index=index,
             source_manifest=source_manifest,
@@ -1955,7 +2090,9 @@ class IngestWorkflow:
         existing_draft: DraftProposal | None,
         plan: LayoutPagePlan,
     ) -> _CourseDraftResult:
-        self._progress(f"[{index}/{len(layout_review.pages)}] Drafting {plan.page_kind} page {plan.title}.")
+        self._progress(
+            f"[{index}/{len(layout_review.pages)}] Drafting {plan.page_kind} page {plan.title}."
+        )
         body = self._draft_page_body(
             module_manifest=module_manifest,
             plan=plan,
@@ -2042,7 +2179,9 @@ class IngestWorkflow:
                 yield future.result()
 
     def _looks_like_provider_failure(self, failures: list[dict[str, str]]) -> bool:
-        return any(self._looks_like_provider_failure_message(item.get("reason", "")) for item in failures)
+        return any(
+            self._looks_like_provider_failure_message(item.get("reason", "")) for item in failures
+        )
 
     def _looks_like_provider_failure_message(self, message: str) -> bool:
         normalized = message.lower()

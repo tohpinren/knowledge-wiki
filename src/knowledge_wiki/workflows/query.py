@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 from ..bootstrap import bootstrap_repository
 from ..config import Settings
-from ..models import QueryAnswer, RetrievalHit, SynthesisSuggestion
+from ..models import QueryAnswer, RetrievalHit, SynthesisSuggestion, WikiPage
 from ..progress import ProgressCallback, noop_progress
 from ..providers import LLMProvider
 from ..retrieval import build_catalog, search_catalog
-from ..utils import STOPWORDS, compact_text, slugify, tokenize
-from ..wiki.graph import load_knowledge_graph
-from ..wiki.pages import read_page
+from ..utils import STOPWORDS, compact_text, slugify, tokenize, top_terms, utc_now
+from ..wiki.graph import load_knowledge_graph, write_knowledge_graph
+from ..wiki.index import regenerate_wiki_index
+from ..wiki.pages import collect_page_source_refs, extract_related_refs, read_page, write_page
+from .common import append_log, regenerate_system_index
 
 
 class QueryWorkflow:
@@ -54,6 +57,52 @@ class QueryWorkflow:
         )
         return answer
 
+    def save_synthesis(self, suggestion: SynthesisSuggestion) -> tuple[str, bool]:
+        target_path = self._resolve_synthesis_path(suggestion.path)
+        relative_path = target_path.relative_to(self.settings.root_dir).as_posix()
+        if target_path.exists():
+            existing = read_page(target_path)
+            if existing.page_type != "synthesis":
+                raise ValueError(
+                    f"Cannot save synthesis into existing non-synthesis page `{relative_path}`."
+                )
+            return relative_path, False
+
+        body = _normalize_synthesis_body(suggestion.title, suggestion.body)
+        summary = suggestion.summary.strip() or compact_text(_strip_markdown(body), limit=220)
+        page = WikiPage(
+            page_id=f"synthesis-{slugify(target_path.stem)}",
+            title=suggestion.title.strip() or target_path.stem.replace("-", " ").title(),
+            page_type="synthesis",
+            page_kind="synthesis",
+            module_id="",
+            parent_page_id="",
+            batch_id="",
+            status="canonical",
+            summary=summary,
+            aliases=[],
+            tags=["synthesis"],
+            related=[],
+            source_refs=list(dict.fromkeys(suggestion.citations)),
+            topics=top_terms(f"{suggestion.title}\n{summary}\n{body}", limit=8),
+            source_count=0,
+            lecture_number=None,
+            last_compiled_at=utc_now(),
+            body=body,
+        )
+        page.related = extract_related_refs(page)
+        page.source_refs = collect_page_source_refs(page)
+        page.source_count = len({ref.split("#", maxsplit=1)[0] for ref in page.source_refs})
+
+        write_page(target_path, page)
+        self._progress(f"Wrote canonical synthesis page {relative_path}.")
+        self._refresh_derived_outputs()
+        append_log(
+            self.settings,
+            f"saved synthesis page `{relative_path}` from query suggestion, then regenerated wiki index and graph.",
+        )
+        return relative_path, True
+
     def _compose_answer(self, question: str, hits: list[RetrievalHit]) -> str:
         if not hits:
             return (
@@ -71,7 +120,11 @@ class QueryWorkflow:
         lines.append(f"This answer is grounded in the compiled wiki pages {references}.")
         lines.extend(["", "## Evidence", ""])
         for hit in hits:
-            refs = ", ".join(f"[source:{ref}]" for ref in hit.source_refs[:3]) if hit.source_refs else "no source refs"
+            refs = (
+                ", ".join(f"[source:{ref}]" for ref in hit.source_refs[:3])
+                if hit.source_refs
+                else "no source refs"
+            )
             lines.append(f"- `{hit.title}`: {hit.snippet} ({refs})")
         return "\n".join(lines)
 
@@ -94,7 +147,9 @@ class QueryWorkflow:
             prompt_lines.append(f"Path: {hit.path}")
             prompt_lines.append(f"Relevant excerpt:\n{hit.snippet}")
             if hit.source_refs:
-                prompt_lines.append("Citations: " + ", ".join(f"[source:{ref}]" for ref in hit.source_refs[:6]))
+                prompt_lines.append(
+                    "Citations: " + ", ".join(f"[source:{ref}]" for ref in hit.source_refs[:6])
+                )
             prompt_lines.append("Full page body:")
             prompt_lines.append(page_context)
             prompt_lines.append("")
@@ -125,9 +180,13 @@ class QueryWorkflow:
 
         top_entries = [
             entry
-            for _, entry in sorted(ranked_entries, key=lambda item: item[0], reverse=True)[: max_results * 2]
+            for _, entry in sorted(ranked_entries, key=lambda item: item[0], reverse=True)[
+                : max_results * 2
+            ]
         ]
-        expanded_entries = self._expand_with_graph_neighbors(top_entries, index_entries, max_results=max_results)
+        expanded_entries = self._expand_with_graph_neighbors(
+            top_entries, index_entries, max_results=max_results
+        )
         hits: list[RetrievalHit] = []
         for entry in expanded_entries:
             page_path = self.settings.wiki_dir / str(entry["path"])
@@ -136,7 +195,9 @@ class QueryWorkflow:
             page = read_page(page_path)
             full_text = f"{page.title}\n{page.summary}\n{page.body}"
             snippet = _relevant_excerpt(full_text, question, limit=500)
-            score = float(_score_index_entry(entry, question) + (_excerpt_score(full_text, question) * 2))
+            score = float(
+                _score_index_entry(entry, question) + (_excerpt_score(full_text, question) * 2)
+            )
             if score <= 0:
                 continue
             hits.append(
@@ -171,10 +232,7 @@ class QueryWorkflow:
     ) -> list[dict[str, object]]:
         if not entries:
             return []
-        index_by_page_path = {
-            f"wiki/{entry['path']}": entry
-            for entry in index_entries
-        }
+        index_by_page_path = {f"wiki/{entry['path']}": entry for entry in index_entries}
         expanded = list(entries)
         seen_paths = {str(entry["path"]) for entry in entries}
         graph = load_knowledge_graph(self.settings)
@@ -201,7 +259,10 @@ class QueryWorkflow:
                 if not neighbor or neighbor.get("kind") != "page":
                     continue
                 neighbor_path = str(neighbor.get("path", ""))
-                if neighbor_path in index_by_page_path and neighbor_path.removeprefix("wiki/") not in seen_paths:
+                if (
+                    neighbor_path in index_by_page_path
+                    and neighbor_path.removeprefix("wiki/") not in seen_paths
+                ):
                     expanded.append(index_by_page_path[neighbor_path])
                     seen_paths.add(neighbor_path.removeprefix("wiki/"))
                 if len(expanded) >= max_results * 3:
@@ -212,6 +273,21 @@ class QueryWorkflow:
         path = self.settings.root_dir / page_ref
         page = read_page(path)
         return compact_text(page.body, limit=12000)
+
+    def _resolve_synthesis_path(self, page_ref: str) -> Path:
+        candidate = Path(page_ref)
+        if not candidate.is_absolute():
+            candidate = self.settings.root_dir / candidate
+        resolved = candidate.resolve()
+        try:
+            resolved.relative_to(self.settings.wiki_dir)
+        except ValueError as exc:
+            raise ValueError(
+                f"Synthesis page `{page_ref}` must live under `{self.settings.wiki_dir}`."
+            ) from exc
+        if resolved.suffix.lower() != ".md":
+            raise ValueError(f"Synthesis page `{page_ref}` must be a markdown file.")
+        return resolved
 
     def _suggest_synthesis(
         self,
@@ -249,8 +325,8 @@ class QueryWorkflow:
         prompt_lines = [
             "SUGGEST_SYNTHESIS_REQUEST",
             "Decide whether the answer is reusable enough to save as a synthesis page.",
-            'Return strict JSON with keys: save (bool), title (str), summary (str), body (str).',
-            "If it is not worth saving, return {\"save\": false}.",
+            "Return strict JSON with keys: save (bool), title (str), summary (str), body (str).",
+            'If it is not worth saving, return {"save": false}.',
             "",
             f"Question: {question}",
             "Answer:",
@@ -274,7 +350,9 @@ class QueryWorkflow:
         if not payload.get("save"):
             return None
         title = str(payload.get("title", "")).strip() or _suggestion_title(question)
-        summary = compact_text(str(payload.get("summary", "")).strip() or _strip_markdown(answer_markdown), limit=220)
+        summary = compact_text(
+            str(payload.get("summary", "")).strip() or _strip_markdown(answer_markdown), limit=220
+        )
         body = str(payload.get("body", "")).strip() or answer_markdown.strip()
         if not body.startswith("# "):
             body = f"# {title}\n\n{body}"
@@ -290,6 +368,11 @@ class QueryWorkflow:
     def _progress(self, message: str) -> None:
         self.progress(message)
 
+    def _refresh_derived_outputs(self) -> None:
+        regenerate_wiki_index(self.settings)
+        write_knowledge_graph(self.settings)
+        regenerate_system_index(self.settings)
+
 
 def _meaningful_query_tokens(question: str) -> list[str]:
     filtered = [
@@ -298,6 +381,15 @@ def _meaningful_query_tokens(question: str) -> list[str]:
         if len(token) > 2 and token not in STOPWORDS and not token.isdigit()
     ]
     return filtered or tokenize(question)
+
+
+def _normalize_synthesis_body(title: str, body: str) -> str:
+    stripped = body.strip()
+    if not stripped:
+        stripped = f"# {title}\n"
+    elif not stripped.startswith("# "):
+        stripped = f"# {title}\n\n{stripped}"
+    return stripped + "\n"
 
 
 def _excerpt_score(text: str, question: str) -> int:
@@ -404,7 +496,9 @@ def _answer_is_insufficient(answer_markdown: str) -> bool:
 
 
 def _suggestion_title(question: str) -> str:
-    cleaned = re.sub(r"^(what|how|why|when|where|is|are|does|do|can)\s+", "", question.strip(), flags=re.I)
+    cleaned = re.sub(
+        r"^(what|how|why|when|where|is|are|does|do|can)\s+", "", question.strip(), flags=re.I
+    )
     cleaned = cleaned.rstrip(" ?")
     cleaned = cleaned or question.strip().rstrip(" ?")
     return cleaned[:1].upper() + cleaned[1:]

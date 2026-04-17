@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+
 from .bootstrap import bootstrap_repository
 from .config import Settings
 from .progress import CliProgressReporter
@@ -27,37 +28,56 @@ def build_parser() -> argparse.ArgumentParser:
     register_parser.add_argument("--origin", default="manual")
     register_parser.add_argument("--scope", default="general")
 
-    ingest_parser = subparsers.add_parser("ingest", help="Generate wiki updates from registered sources.")
+    ingest_parser = subparsers.add_parser(
+        "ingest", help="Generate wiki updates from registered sources."
+    )
     ingest_parser.add_argument("--source-id", action="append", default=[])
 
-    ingest_course_parser = subparsers.add_parser("ingest-course", help="Recursively ingest a course/module directory.")
+    ingest_course_parser = subparsers.add_parser(
+        "ingest-course", help="Recursively ingest a course/module directory."
+    )
     ingest_course_parser.add_argument("path", help="Path like raw/Y1S1/CS1231S")
     ingest_course_parser.add_argument("--term")
     ingest_course_parser.add_argument("--module-code")
 
     query_parser = subparsers.add_parser("query", help="Answer a question from the wiki.")
     query_parser.add_argument("question")
+    query_parser.add_argument(
+        "--save-synthesis",
+        action="store_true",
+        help="Save the suggested synthesis page if one is generated.",
+    )
 
     layouts_parser = subparsers.add_parser("layouts", help="List layout review artifacts.")
     layouts_parser.add_argument("--state", choices=["pending", "approved", "rejected"])
     layouts_parser.add_argument("--module-id")
     layouts_parser.add_argument("--batch-id")
 
-    show_layout_parser = subparsers.add_parser("show-layout", help="Show a human-readable layout review.")
+    show_layout_parser = subparsers.add_parser(
+        "show-layout", help="Show a human-readable layout review."
+    )
     show_layout_parser.add_argument("layout_id")
 
-    revise_layout_parser = subparsers.add_parser("revise-layout", help="Revise a layout with reviewer feedback.")
+    revise_layout_parser = subparsers.add_parser(
+        "revise-layout", help="Revise a layout with reviewer feedback."
+    )
     revise_layout_parser.add_argument("layout_id")
     revise_layout_parser.add_argument("--feedback", required=True)
 
-    revise_page_parser = subparsers.add_parser("revise-page", help="Revise a published wiki page with reviewer feedback.")
+    revise_page_parser = subparsers.add_parser(
+        "revise-page", help="Revise a published wiki page with reviewer feedback."
+    )
     revise_page_parser.add_argument("page")
     revise_page_parser.add_argument("--feedback", required=True)
 
-    approve_layout_parser = subparsers.add_parser("approve-layout", help="Approve a course layout review.")
+    approve_layout_parser = subparsers.add_parser(
+        "approve-layout", help="Approve a course layout review."
+    )
     approve_layout_parser.add_argument("layout_id")
 
-    reject_layout_parser = subparsers.add_parser("reject-layout", help="Reject a course layout review.")
+    reject_layout_parser = subparsers.add_parser(
+        "reject-layout", help="Reject a course layout review."
+    )
     reject_layout_parser.add_argument("layout_id")
 
     subparsers.add_parser("lint", help="Run semantic and structural lint checks.")
@@ -131,7 +151,9 @@ def _run_command(args, settings: Settings, progress) -> int:
         print(f"Status: {result.module_manifest.status}")
         print(f"Evidence artifacts: {len(result.evidence_artifacts)}")
         if result.layout_review:
-            print(f"Layout: {result.layout_review.layout_id} [{result.layout_review.approval_state}]")
+            print(
+                f"Layout: {result.layout_review.layout_id} [{result.layout_review.approval_state}]"
+            )
             print(f"Planned pages: {len(result.draft_proposals)}")
         else:
             print("Layout: not created")
@@ -150,16 +172,28 @@ def _run_command(args, settings: Settings, progress) -> int:
             print(f"- Title: {suggestion.title}")
             print(f"- Path: {suggestion.path}")
             print(f"- Summary: {suggestion.summary}")
+            if args.save_synthesis:
+                saved_path, created = workflow.save_synthesis(suggestion)
+                if created:
+                    print(f"- Saved: {saved_path}")
+                else:
+                    print(f"- Already exists: {saved_path}")
+        elif args.save_synthesis:
+            print("\nNo synthesis suggestion was generated.")
         return 0
 
     if args.command == "layouts":
         workflow = ReviewWorkflow(settings, provider=None, progress=progress)
-        layouts = workflow.list_layouts(state=args.state, module_id=args.module_id, batch_id=args.batch_id)
+        layouts = workflow.list_layouts(
+            state=args.state, module_id=args.module_id, batch_id=args.batch_id
+        )
         if not layouts:
             print("No layouts found.")
             return 0
         for layout in layouts:
-            print(f"{layout.layout_id}: {layout.approval_state} -> {layout.module_id} [{len(layout.pages)} pages]")
+            print(
+                f"{layout.layout_id}: {layout.approval_state} -> {layout.module_id} [{len(layout.pages)} pages]"
+            )
         return 0
 
     if args.command == "show-layout":
@@ -221,4 +255,6 @@ def _report_provider_settings(progress, settings: Settings, *, purpose: str, pro
     else:
         progress(f"Configured {purpose} provider {provider_name}/{model_name}.")
     if provider is None:
-        progress(f"No initialized client is available for {purpose}; command will use fallback behavior if supported.")
+        progress(
+            f"No initialized client is available for {purpose}; command will use fallback behavior if supported."
+        )

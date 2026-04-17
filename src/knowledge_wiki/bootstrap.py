@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from .config import Settings
 from .utils import utc_now
-
 
 BOOTSTRAP_FILES = {
     "raw/README.md": "# Raw Sources\n\nStore immutable source material here.\n",
@@ -55,7 +52,7 @@ BOOTSTRAP_FILES = {
         "# Knowledge Wiki Agent Rules\n\n"
         "1. Prefer compiled wiki pages over raw sources when answering questions.\n"
         "2. Query by reading `wiki/index.md` first, then opening the relevant wiki pages.\n"
-        "3. Do not write directly to canonical wiki pages outside the review workflow.\n"
+        "3. Do not write directly to canonical wiki pages outside the review workflow, except for an explicit saved synthesis.\n"
         "4. Every synthesized section should carry stable source tokens.\n"
         "5. Publishing canonical pages must update the wiki index, graph, and system log together.\n"
     ),

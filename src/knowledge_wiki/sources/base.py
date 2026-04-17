@@ -6,7 +6,6 @@ from pathlib import Path
 
 from ..models import ExtractedSource, SourceManifest, SourceSection
 
-
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 
 
@@ -99,6 +98,8 @@ def split_markdown_sections(text: str, *, default_heading: str = "Overview") -> 
     return sections
 
 
-def build_single_section(text: str, *, heading: str = "Overview", section_id: str = "section-1") -> list[SourceSection]:
+def build_single_section(
+    text: str, *, heading: str = "Overview", section_id: str = "section-1"
+) -> list[SourceSection]:
     stripped = text.strip()
     return [SourceSection(section_id=section_id, heading=heading, text=stripped or heading)]

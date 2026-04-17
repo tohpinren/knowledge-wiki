@@ -8,7 +8,6 @@ from ..utils import ensure_parent, slugify
 from .frontmatter import render_frontmatter, split_frontmatter
 from .provenance import extract_source_refs
 
-
 PAGE_TYPE_DIRECTORIES = {
     "concept": "concepts",
     "course": "courses",

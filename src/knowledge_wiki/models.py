@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-
 ALLOWED_SOURCE_KINDS = {
     "markdown",
     "notion",
@@ -85,7 +84,7 @@ class SourceManifest:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "SourceManifest":
+    def from_dict(cls, payload: dict[str, Any]) -> SourceManifest:
         manifest = cls(
             source_id=str(payload["source_id"]),
             title=str(payload["title"]),
@@ -164,7 +163,7 @@ class ModuleManifest:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "ModuleManifest":
+    def from_dict(cls, payload: dict[str, Any]) -> ModuleManifest:
         manifest = cls(
             module_id=str(payload["module_id"]),
             term=str(payload["term"]),
@@ -252,7 +251,7 @@ class EvidenceArtifact:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "EvidenceArtifact":
+    def from_dict(cls, payload: dict[str, Any]) -> EvidenceArtifact:
         artifact = cls(
             evidence_id=str(payload["evidence_id"]),
             source_id=str(payload["source_id"]),
@@ -313,7 +312,7 @@ class LayoutPagePlan:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "LayoutPagePlan":
+    def from_dict(cls, payload: dict[str, Any]) -> LayoutPagePlan:
         plan = cls(
             title=str(payload["title"]),
             slug=str(payload["slug"]),
@@ -373,7 +372,7 @@ class LayoutReview:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "LayoutReview":
+    def from_dict(cls, payload: dict[str, Any]) -> LayoutReview:
         review = cls(
             layout_id=str(payload["layout_id"]),
             module_id=str(payload["module_id"]),
@@ -453,7 +452,7 @@ class WikiPage:
         }
 
     @classmethod
-    def from_parts(cls, frontmatter: dict[str, Any], body: str) -> "WikiPage":
+    def from_parts(cls, frontmatter: dict[str, Any], body: str) -> WikiPage:
         page = cls(
             page_id=str(frontmatter["page_id"]),
             title=str(frontmatter["title"]),
@@ -469,7 +468,9 @@ class WikiPage:
             related=[str(item) for item in frontmatter.get("related", [])],
             source_refs=[str(item) for item in frontmatter.get("source_refs", [])],
             topics=[str(item) for item in frontmatter.get("topics", [])],
-            source_count=int(frontmatter.get("source_count", len(frontmatter.get("source_refs", [])))),
+            source_count=int(
+                frontmatter.get("source_count", len(frontmatter.get("source_refs", [])))
+            ),
             lecture_number=(
                 int(frontmatter["lecture_number"])
                 if frontmatter.get("lecture_number") not in ("", None)
@@ -579,7 +580,7 @@ class DraftProposal:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "DraftProposal":
+    def from_dict(cls, payload: dict[str, Any]) -> DraftProposal:
         proposal = cls(
             draft_id=str(payload["draft_id"]),
             target_page=str(payload["target_page"]),
@@ -613,7 +614,7 @@ class CourseIngestResult:
 class GenerationResult:
     text: str
     raw_response: dict[str, Any] = field(default_factory=dict)
-    usage: "GenerationUsage | None" = None
+    usage: GenerationUsage | None = None
 
 
 @dataclass(slots=True)
@@ -669,6 +670,16 @@ class SynthesisSuggestion:
             "body": self.body,
             "citations": self.citations,
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> SynthesisSuggestion:
+        return cls(
+            title=str(payload["title"]),
+            path=str(payload["path"]),
+            summary=str(payload["summary"]),
+            body=str(payload["body"]),
+            citations=[str(item) for item in payload.get("citations", [])],
+        )
 
 
 @dataclass(slots=True)

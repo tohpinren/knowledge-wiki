@@ -1,29 +1,31 @@
 from __future__ import annotations
 
+import re
 from collections import Counter
 from pathlib import Path
-import re
 
 from ..bootstrap import bootstrap_repository
 from ..config import Settings
-from ..models import DraftProposal, EvidenceArtifact, LayoutReview, LayoutPagePlan, WikiPage
+from ..models import DraftProposal, LayoutPagePlan, LayoutReview, WikiPage
 from ..progress import ProgressCallback, noop_progress
 from ..providers import LLMProvider
-from ..utils import compact_text
-from ..utils import ensure_parent, utc_now
-from ..utils import slugify
+from ..utils import compact_text, ensure_parent, slugify, utc_now
 from ..wiki.frontmatter import split_frontmatter
 from ..wiki.graph import write_knowledge_graph
 from ..wiki.index import regenerate_wiki_index
-from ..wiki.pages import collect_page_source_refs, extract_related_refs, iter_page_paths, read_page, render_page
-from .ingest import IngestWorkflow
+from ..wiki.pages import (
+    collect_page_source_refs,
+    extract_related_refs,
+    iter_page_paths,
+    read_page,
+    render_page,
+)
 from .common import (
     append_log,
     list_drafts,
     list_evidence_artifacts,
     list_layout_reviews,
     list_source_manifests,
-    load_draft,
     load_layout_review,
     load_module_manifest,
     load_source_manifest,
@@ -33,6 +35,7 @@ from .common import (
     save_module_manifest,
     save_source_manifest,
 )
+from .ingest import IngestWorkflow
 
 
 class ReviewWorkflow:
@@ -104,7 +107,9 @@ class ReviewWorkflow:
         batch_id: str | None = None,
     ) -> list[LayoutReview]:
         self._progress("Loading layout reviews.")
-        return list_layout_reviews(self.settings, state=state, module_id=module_id, batch_id=batch_id)
+        return list_layout_reviews(
+            self.settings, state=state, module_id=module_id, batch_id=batch_id
+        )
 
     def load_layout(self, layout_id: str) -> LayoutReview:
         return load_layout_review(self.settings, layout_id)
@@ -154,7 +159,9 @@ class ReviewWorkflow:
         layout.metadata["pruned_page_count"] = len(pruned_paths)
         layout.updated_at = utc_now()
         save_layout_review(self.settings, layout)
-        self._progress(f"Updating module state for {layout.module_id} and regenerating derived knowledge artifacts.")
+        self._progress(
+            f"Updating module state for {layout.module_id} and regenerating derived knowledge artifacts."
+        )
         self._refresh_derived_outputs()
         append_log(
             self.settings,
@@ -174,7 +181,9 @@ class ReviewWorkflow:
         layout.updated_at = utc_now()
         save_layout_review(self.settings, layout)
         self._update_module_after_layout(layout.module_id, state="rejected")
-        self._progress(f"Updating module state for {layout.module_id} and regenerating the system index.")
+        self._progress(
+            f"Updating module state for {layout.module_id} and regenerating the system index."
+        )
         regenerate_system_index(self.settings)
         append_log(self.settings, f"rejected layout `{layout_id}` for module `{layout.module_id}`.")
         return layout
@@ -185,16 +194,28 @@ class ReviewWorkflow:
         self._progress(f"Revising layout {layout_id}.")
         layout = load_layout_review(self.settings, layout_id)
         if layout.approval_state == "approved":
-            raise ValueError(f"Layout `{layout_id}` is already approved and cannot be revised in place.")
+            raise ValueError(
+                f"Layout `{layout_id}` is already approved and cannot be revised in place."
+            )
         module_manifest = load_module_manifest(self.settings, layout.module_id)
-        existing_drafts = list_drafts(self.settings, module_id=layout.module_id, batch_id=layout.batch_id)
+        existing_drafts = list_drafts(
+            self.settings, module_id=layout.module_id, batch_id=layout.batch_id
+        )
         if any(draft.approval_state == "approved" for draft in existing_drafts):
-            raise ValueError("Cannot revise a layout after any draft in the batch has been approved.")
+            raise ValueError(
+                "Cannot revise a layout after any draft in the batch has been approved."
+            )
 
-        evidence_artifacts = list_evidence_artifacts(self.settings, module_id=layout.module_id, batch_id=layout.batch_id)
-        self._progress(f"Loaded {len(evidence_artifacts)} evidence artifact(s) for {layout.module_id}.")
+        evidence_artifacts = list_evidence_artifacts(
+            self.settings, module_id=layout.module_id, batch_id=layout.batch_id
+        )
+        self._progress(
+            f"Loaded {len(evidence_artifacts)} evidence artifact(s) for {layout.module_id}."
+        )
         ingest = IngestWorkflow(self.settings, provider=self.provider, progress=self.progress)
-        nearby_pages = ingest._nearby_existing_pages(module_manifest.module_id, module_manifest.term, evidence_artifacts)
+        nearby_pages = ingest._nearby_existing_pages(
+            module_manifest.module_id, module_manifest.term, evidence_artifacts
+        )
         self._progress("Generating a revised layout plan from reviewer feedback.")
         revised = ingest._build_layout_review(
             module_manifest=module_manifest,
@@ -222,7 +243,9 @@ class ReviewWorkflow:
             evidence_artifacts=evidence_artifacts,
             nearby_pages=nearby_pages,
             feedback_by_slug={page.slug: feedback for page in revised.pages},
-            existing_drafts={draft.metadata.get("page_slug", ""): draft for draft in existing_drafts},
+            existing_drafts={
+                draft.metadata.get("page_slug", ""): draft for draft in existing_drafts
+            },
         )
         revised_slugs = {draft.metadata.get("page_slug") for draft in revised_drafts}
         for draft in existing_drafts:
@@ -233,7 +256,9 @@ class ReviewWorkflow:
                 draft.metadata["superseded_by_layout_revision"] = feedback
                 save_draft(self.settings, draft)
         for draft in revised_drafts:
-            prior = next((item for item in existing_drafts if item.draft_id == draft.draft_id), None)
+            prior = next(
+                (item for item in existing_drafts if item.draft_id == draft.draft_id), None
+            )
             if prior:
                 revision_history = list(prior.metadata.get("revision_history", []))
                 revision_history.append({"revised_at": utc_now(), "feedback": f"layout:{feedback}"})
@@ -398,17 +423,23 @@ class ReviewWorkflow:
             else []
         )
         artifacts_by_ref = {
-            ref: artifact
-            for artifact in evidence_artifacts
-            for ref in artifact.source_refs
+            ref: artifact for artifact in evidence_artifacts for ref in artifact.source_refs
         }
         evidence_rows: list[list[str]] = []
         source_titles: list[str] = []
         seen_titles: set[str] = set()
         for ref in page.source_refs:
             artifact = artifacts_by_ref.get(ref)
-            title = str(artifact.metadata.get("title", artifact.source_id)) if artifact else "Unknown source"
-            source_path = str(artifact.metadata.get("module_relpath", artifact.source_path)) if artifact else ""
+            title = (
+                str(artifact.metadata.get("title", artifact.source_id))
+                if artifact
+                else "Unknown source"
+            )
+            source_path = (
+                str(artifact.metadata.get("module_relpath", artifact.source_path))
+                if artifact
+                else ""
+            )
             summary = compact_text(artifact.summary, limit=90) if artifact else ""
             evidence_rows.append([ref, title, source_path, summary])
             if title not in seen_titles:
@@ -513,7 +544,9 @@ class ReviewWorkflow:
         self._mark_module_sources_published(module_id, batch_id)
 
     def _mark_module_sources_published(self, module_id: str, batch_id: str) -> None:
-        for manifest in list_source_manifests(self.settings, module_id=module_id, batch_id=batch_id):
+        for manifest in list_source_manifests(
+            self.settings, module_id=module_id, batch_id=batch_id
+        ):
             if manifest.extract_status == "extracted":
                 manifest.ingest_status = "published"
                 manifest.updated_at = utc_now()
@@ -537,7 +570,9 @@ class ReviewWorkflow:
 
     def _revised_page_body(self, page: WikiPage, page_path: Path, feedback: str) -> str:
         if page.module_id and page.batch_id:
-            layouts = list_layout_reviews(self.settings, module_id=page.module_id, batch_id=page.batch_id)
+            layouts = list_layout_reviews(
+                self.settings, module_id=page.module_id, batch_id=page.batch_id
+            )
             if layouts:
                 layout = layouts[-1]
                 page_slug = self._page_slug_for_page(page, page_path)
@@ -549,8 +584,12 @@ class ReviewWorkflow:
                         module_id=page.module_id,
                         batch_id=page.batch_id,
                     )
-                    ingest = IngestWorkflow(self.settings, provider=self.provider, progress=self.progress)
-                    nearby_pages = ingest._nearby_existing_pages(module_manifest.module_id, module_manifest.term, evidence_artifacts)
+                    ingest = IngestWorkflow(
+                        self.settings, provider=self.provider, progress=self.progress
+                    )
+                    nearby_pages = ingest._nearby_existing_pages(
+                        module_manifest.module_id, module_manifest.term, evidence_artifacts
+                    )
                     return ingest._draft_page_body(
                         module_manifest=module_manifest,
                         plan=plan,
@@ -579,7 +618,9 @@ class ReviewWorkflow:
             ]
         )
         self._progress("Generating revised page content from reviewer feedback.")
-        result = self.provider.generate(prompt, system_prompt="You revise canonical wiki pages based on reviewer feedback.")
+        result = self.provider.generate(
+            prompt, system_prompt="You revise canonical wiki pages based on reviewer feedback."
+        )
         return _normalize_revised_body(page.title, result.text)
 
     def _page_slug_for_page(self, page: WikiPage, page_path: Path) -> str:
@@ -601,7 +642,9 @@ class ReviewWorkflow:
         try:
             resolved.relative_to(self.settings.root_dir)
         except ValueError as exc:
-            raise ValueError(f"Page `{page_ref}` must live under `{self.settings.root_dir}`.") from exc
+            raise ValueError(
+                f"Page `{page_ref}` must live under `{self.settings.root_dir}`."
+            ) from exc
         return resolved
 
     def _refresh_derived_outputs(self) -> None:

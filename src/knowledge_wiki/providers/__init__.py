@@ -31,4 +31,10 @@ def build_provider(settings: Settings, *, purpose: ProviderPurpose = "qa") -> LL
     raise ProviderError(f"Unsupported provider `{provider_name}` for {purpose}.")
 
 
-__all__ = ["GeminiProvider", "LLMProvider", "ProviderError", "OpenAICompatibleProvider", "build_provider"]
+__all__ = [
+    "GeminiProvider",
+    "LLMProvider",
+    "ProviderError",
+    "OpenAICompatibleProvider",
+    "build_provider",
+]

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 from itertools import combinations
-from pathlib import Path
-import re
 from typing import Any
 
 from ..config import Settings
@@ -11,7 +10,6 @@ from ..models import WikiPage
 from ..utils import slugify, write_json
 from ..workflows.common import list_evidence_artifacts, list_source_manifests
 from .pages import extract_related_refs, iter_page_paths, read_page
-
 
 HEADING_RE = re.compile(r"^##+\s+(.+)$", flags=re.MULTILINE)
 
@@ -30,9 +28,7 @@ def build_knowledge_graph(settings: Settings) -> tuple[dict[str, Any], str]:
     source_manifests = list_source_manifests(settings)
     evidence_artifacts = list_evidence_artifacts(settings)
     evidence_by_ref = {
-        ref: artifact
-        for artifact in evidence_artifacts
-        for ref in artifact.source_refs
+        ref: artifact for artifact in evidence_artifacts for ref in artifact.source_refs
     }
 
     nodes: list[dict[str, Any]] = []
@@ -107,7 +103,7 @@ def build_knowledge_graph(settings: Settings) -> tuple[dict[str, Any], str]:
             topics=list(artifact.key_topics),
         )
 
-    for relative_path, page in pages:
+    for _relative_path, page in pages:
         page_node = page_node_ids[page.page_id]
         related_refs = extract_related_refs(page)
         if page.parent_page_id and page.parent_page_id in page_node_ids:
@@ -125,7 +121,9 @@ def build_knowledge_graph(settings: Settings) -> tuple[dict[str, Any], str]:
         for ref in page.source_refs:
             artifact = evidence_by_ref.get(ref)
             if artifact:
-                add_edge(page_node, f"evidence:{artifact.evidence_id}", "derived_from", "deterministic")
+                add_edge(
+                    page_node, f"evidence:{artifact.evidence_id}", "derived_from", "deterministic"
+                )
 
         concepts = _page_concepts(page)
         page_concepts[page_node].update(concepts)

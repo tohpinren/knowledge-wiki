@@ -82,7 +82,9 @@ class GeminiProvider(LLMProvider):
 
     def _require_client(self):
         if genai is None:
-            raise ProviderError("Gemini support requires the `google-genai` package to be installed.")
+            raise ProviderError(
+                "Gemini support requires the `google-genai` package to be installed."
+            )
         if not self.api_key:
             raise ProviderError("Gemini provider requires a GEMINI_API_KEY.")
         kwargs = {"api_key": self.api_key}
