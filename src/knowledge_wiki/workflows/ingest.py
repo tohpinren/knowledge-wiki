@@ -29,6 +29,7 @@ from ..sources.discovery import DiscoveredFile
 from ..utils import (
     compact_text,
     extract_json_object,
+    manifest_reason_with_relative_paths,
     relative_posix,
     sha256_path,
     slugify,
@@ -113,6 +114,11 @@ class IngestWorkflow:
         self._usage_tracker: _BatchUsageTracker | None = None
         bootstrap_repository(settings)
 
+    def _sanitize_manifest_reason(self, message: str | None) -> str:
+        if not message:
+            return ""
+        return manifest_reason_with_relative_paths(message, root_dir=self.settings.root_dir)
+
     def register_source(
         self,
         path: str | Path,
@@ -196,7 +202,7 @@ class IngestWorkflow:
                 failed += 1
                 manifest.extract_status = "failed"
                 manifest.ingest_status = "registered"
-                manifest.skip_reason = result.error
+                manifest.skip_reason = self._sanitize_manifest_reason(result.error)
                 manifest.updated_at = utc_now()
                 save_source_manifest(self.settings, manifest)
                 self._progress(
@@ -330,7 +336,7 @@ class IngestWorkflow:
             source_manifest = result.source_manifest
             if result.artifact is None:
                 source_manifest.extract_status = "failed"
-                source_manifest.skip_reason = result.error
+                source_manifest.skip_reason = self._sanitize_manifest_reason(result.error)
                 source_manifest.ingest_status = "registered"
                 source_manifest.updated_at = utc_now()
                 save_source_manifest(self.settings, source_manifest)
@@ -375,7 +381,7 @@ class IngestWorkflow:
             source_manifest = result.source_manifest
             if result.artifact is None:
                 source_manifest.extract_status = "failed"
-                source_manifest.skip_reason = result.error
+                source_manifest.skip_reason = self._sanitize_manifest_reason(result.error)
                 source_manifest.ingest_status = "registered"
                 source_manifest.updated_at = utc_now()
                 save_source_manifest(self.settings, source_manifest)

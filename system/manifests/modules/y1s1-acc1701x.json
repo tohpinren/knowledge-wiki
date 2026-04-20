@@ -3,7 +3,7 @@
   "created_at": "2026-04-11T04:50:46+00:00",
   "discovered_files": 125,
   "draft_review_state": "approved",
-  "layout_review_state": "pending",
+  "layout_review_state": "approved",
   "metadata": {
     "reused_evidence_files": 0,
     "skipped_files": [
@@ -109,11 +109,11 @@
       },
       {
         "path": "Tutorial/Admin/Group Presentation-3.docx",
-        "reason": "No extractable text found in office document: /Users/tohpinren/Repos/knowledge-wiki/raw/Y1S1/ACC1701X/Tutorial/Admin/Group Presentation-3.docx"
+        "reason": "No extractable text found in office document: raw/Y1S1/ACC1701X/Tutorial/Admin/Group Presentation-3.docx"
       },
       {
         "path": "Tutorial/Admin/My tutorial groups-3.docx",
-        "reason": "No extractable text found in office document: /Users/tohpinren/Repos/knowledge-wiki/raw/Y1S1/ACC1701X/Tutorial/Admin/My tutorial groups-3.docx"
+        "reason": "No extractable text found in office document: raw/Y1S1/ACC1701X/Tutorial/Admin/My tutorial groups-3.docx"
       }
     ],
     "usable_files": [

@@ -1,7 +1,89 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from .config import Settings
 from .utils import utc_now
+
+_HARDCODED_OBSIDIAN: dict[str, str] = {
+    "core-plugins.json": (
+        "{\n"
+        '  "file-explorer": true,\n'
+        '  "global-search": false,\n'
+        '  "switcher": false,\n'
+        '  "graph": true,\n'
+        '  "backlink": true,\n'
+        '  "outgoing-link": false,\n'
+        '  "tag-pane": false,\n'
+        '  "page-preview": true,\n'
+        '  "daily-notes": false,\n'
+        '  "templates": false,\n'
+        '  "note-composer": false,\n'
+        '  "command-palette": false,\n'
+        '  "slash-command": false,\n'
+        '  "editor-status": false,\n'
+        '  "markdown-importer": false,\n'
+        '  "zk-prefixer": false,\n'
+        '  "random-note": false,\n'
+        '  "outline": true,\n'
+        '  "word-count": false,\n'
+        '  "slides": false,\n'
+        '  "audio-recorder": false,\n'
+        '  "workspaces": false,\n'
+        '  "file-recovery": false,\n'
+        '  "publish": false,\n'
+        '  "sync": false,\n'
+        '  "canvas": true,\n'
+        '  "footnotes": false,\n'
+        '  "properties": true,\n'
+        '  "bookmarks": true,\n'
+        '  "bases": true,\n'
+        '  "webviewer": false\n'
+        "}\n"
+    ),
+    "graph.json": (
+        "{\n"
+        '  "collapse-filter": false,\n'
+        '  "search": "path:wiki/courses  ",\n'
+        '  "showTags": false,\n'
+        '  "showAttachments": false,\n'
+        '  "hideUnresolved": false,\n'
+        '  "showOrphans": true,\n'
+        '  "collapse-color-groups": false,\n'
+        '  "colorGroups": [],\n'
+        '  "collapse-display": false,\n'
+        '  "showArrow": false,\n'
+        '  "textFadeMultiplier": 0,\n'
+        '  "nodeSizeMultiplier": 1,\n'
+        '  "lineSizeMultiplier": 1,\n'
+        '  "collapse-forces": true,\n'
+        '  "centerStrength": 0.518713248970312,\n'
+        '  "repelStrength": 10,\n'
+        '  "linkStrength": 1,\n'
+        '  "linkDistance": 250,\n'
+        '  "scale": 0.2723736173937233,\n'
+        '  "close": false\n'
+        "}\n"
+    ),
+}
+
+
+def _obsidian_bootstrap_text(name: str) -> str:
+    """Return Obsidian config text matching the tracked vault, or embedded defaults when not in a checkout."""
+    root = Path(__file__).resolve().parents[2]
+    candidate = root / ".obsidian" / name
+    if candidate.exists():
+        text = candidate.read_text(encoding="utf-8")
+        return text if text.endswith("\n") else text + "\n"
+    return _HARDCODED_OBSIDIAN[name]
+
+
+def _bootstrap_files() -> dict[str, str]:
+    files = dict(BOOTSTRAP_FILES)
+    files[".obsidian/core-plugins.json"] = _obsidian_bootstrap_text("core-plugins.json")
+    files[".obsidian/graph.json"] = _obsidian_bootstrap_text("graph.json")
+    return files
+
 
 BOOTSTRAP_FILES = {
     "raw/README.md": "# Raw Sources\n\nStore immutable source material here.\n",
@@ -20,29 +102,7 @@ BOOTSTRAP_FILES = {
         '  "useMarkdownLinks": true\n'
         "}\n"
     ),
-    ".obsidian/core-plugins.json": (
-        "[\n"
-        '  "file-explorer",\n'
-        '  "search",\n'
-        '  "outline",\n'
-        '  "backlink",\n'
-        '  "page-preview",\n'
-        '  "graph"\n'
-        "]\n"
-    ),
     ".obsidian/appearance.json": "{}\n",
-    ".obsidian/graph.json": (
-        "{\n"
-        '  "search": "path:wiki",\n'
-        '  "showAttachments": false,\n'
-        '  "showTags": false,\n'
-        '  "showOrphans": true,\n'
-        '  "collapse-filter": false,\n'
-        '  "collapse-color-groups": false,\n'
-        '  "collapse-display": false,\n'
-        '  "groups": []\n'
-        "}\n"
-    ),
     "system/README.md": (
         "# System\n\n"
         "Operational metadata for the knowledge wiki lives here. This directory mixes canonical policy files "
@@ -104,7 +164,7 @@ BOOTSTRAP_FILES = {
 
 def bootstrap_repository(settings: Settings) -> None:
     settings.ensure_layout()
-    for relative_path, content in BOOTSTRAP_FILES.items():
+    for relative_path, content in _bootstrap_files().items():
         path = settings.root_dir / relative_path
         if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)

@@ -111,6 +111,15 @@ def relative_posix(path: Path, root: Path) -> str:
     return path.resolve().relative_to(root.resolve()).as_posix()
 
 
+def manifest_reason_with_relative_paths(reason: str, *, root_dir: Path) -> str:
+    """Rewrite absolute paths under ``root_dir`` to repo-relative paths for portable manifests."""
+    if not reason:
+        return reason
+    root = root_dir.resolve()
+    prefix = str(root).rstrip("/") + "/"
+    return reason.replace(prefix, "")
+
+
 def extract_json_object(text: str) -> dict[str, Any]:
     stripped = text.strip()
     if not stripped:

@@ -527,6 +527,7 @@ class ReviewWorkflow:
         elif approved:
             manifest.status = "published"
             manifest.draft_review_state = "approved"
+            manifest.layout_review_state = "approved"
             self._mark_module_sources_published(module_id, batch_id)
         else:
             manifest.status = "drafts_rejected"
