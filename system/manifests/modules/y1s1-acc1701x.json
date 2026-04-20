@@ -1,0 +1,230 @@
+{
+  "batch_id": "y1s1-acc1701x-20260411t045046z",
+  "created_at": "2026-04-11T04:50:46+00:00",
+  "discovered_files": 125,
+  "draft_review_state": "approved",
+  "layout_review_state": "approved",
+  "metadata": {
+    "reused_evidence_files": 0,
+    "skipped_files": [
+      {
+        "path": ".DS_Store",
+        "reason": "ignored_file"
+      },
+      {
+        "path": "Cheatsheet/.DS_Store",
+        "reason": "ignored_file"
+      },
+      {
+        "path": "Finals/.DS_Store",
+        "reason": "ignored_file"
+      },
+      {
+        "path": "Lecture/.DS_Store",
+        "reason": "ignored_file"
+      },
+      {
+        "path": "Lecture/In-class Demo E6-10 Solution.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Lecture/In-class Example - Minion Co Worksheet.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Lecture/Inclass Exercise Food2U WORKSHEET.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Lecture/Tencent Ratios and Dupont Analysis.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Lecture/WildLuwak Coffee SCF Excel WORKING.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Mock Finals/.DS_Store",
+        "reason": "ignored_file"
+      },
+      {
+        "path": "Tutorial/.DS_Store",
+        "reason": "ignored_file"
+      },
+      {
+        "path": "Tutorial/Admin/Detailed Schedule with Tutorial Assignments",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/Admin/TX16 Presentation Group and Seating Arrangement.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/HaloCrypto/HaloCrypto Tutorial 1 Excel Solution.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/HaloCrypto/HaloCrypto Tutorial 2 Solution.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/HaloCrypto/HaloCrypto Tutorial 3 Solution.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/HaloCrypto/HaloCrypto Tutorial new.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/HaloCrypto/HaloCrypto spreadsheet old.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/HaloCrypto/HaloCrypto.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/Samsung/.DS_Store",
+        "reason": "ignored_file"
+      },
+      {
+        "path": "Tutorial/Samsung/JCB.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/Samsung/Tutorial 10 Statement of Cash Flows Illustrations.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/Samsung/Tutorial 10.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/Samsung/Tutorial 7 Inventory.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/Samsung/Tutorial 8 Samsung question part b.xlsx",
+        "reason": "unsupported_extension"
+      },
+      {
+        "path": "Tutorial/Admin/Group Presentation-3.docx",
+        "reason": "No extractable text found in office document: raw/Y1S1/ACC1701X/Tutorial/Admin/Group Presentation-3.docx"
+      },
+      {
+        "path": "Tutorial/Admin/My tutorial groups-3.docx",
+        "reason": "No extractable text found in office document: raw/Y1S1/ACC1701X/Tutorial/Admin/My tutorial groups-3.docx"
+      }
+    ],
+    "usable_files": [
+      "ACC1701X Midterm Test Review.pdf",
+      "Cheatsheet/cs1.docx",
+      "Cheatsheet/cs1.pdf",
+      "Cheatsheet/cs2.pdf",
+      "Cheatsheet/cs3.pdf",
+      "Finals/ACC1701 Review Packet.pdf",
+      "Finals/AY06_07/ACC1002 AY06_07 Sem 1 Finals Answer.pdf",
+      "Finals/AY06_07/ACC1002 AY06_07 Sem 1 Finals.pdf",
+      "Finals/AY07_08/ACC1002 AY07_08 Sem 1 Finals Answer.pdf",
+      "Finals/AY07_08/ACC1002 AY07_08 Sem 1 Finals.pdf",
+      "Finals/AY07_08/ACC1002 AY07_08 Sem 2 Finals Answer.pdf",
+      "Finals/AY07_08/ACC1002 AY07_08 Sem 2 Finals.pdf",
+      "Finals/AY08_09/ACC1002 AY08_09 Sem 1 Finals + Answer.pdf",
+      "Finals/AY11_12/ACC1002 AY11_12 Sem 2 Mock Exam Answer.pdf",
+      "Finals/AY11_12/ACC1002 AY11_12 Sem 2 Mock Exam.pdf",
+      "Finals/AY12_13/ACC1002 AY12_13 Sem 1 Mock Exam Answer.pdf",
+      "Finals/AY12_13/ACC1002 AY12_13 Sem 1 Mock Exam.pdf",
+      "Finals/AY12_13/ACC1701 AY12_13 Sem 1 Essay Drill + Answer.pdf",
+      "Finals/AY14_15/ACC1002 AY14_15 Sem 2 Mock Exam Answer.pdf",
+      "Finals/AY14_15/ACC1002 AY14_15 Sem 2 Mock Exam.pdf",
+      "Finals/AY14_15/ACC1701 AY14_15 Sem 1 Essay Drill + Answer.pdf",
+      "Finals/AY15_16/ACC1002 AY15_16 Sem 2 Mock Exam Answer.pdf",
+      "Finals/AY15_16/ACC1002 AY15_16 Sem 2 Mock Exam.pdf",
+      "Finals/AY16_17/ACC1002 AY16_17 Mock Test 1 Answer.pdf",
+      "Finals/AY16_17/ACC1002 AY16_17 Mock Test 1.pdf",
+      "Finals/AY16_17/ACC1002 AY16_17 Sem 1 Mock Exam Answer.pdf",
+      "Finals/AY16_17/ACC1002 AY16_17 Sem 1 Mock Exam.pdf",
+      "Finals/AY16_17/ACC1002 AY16_17 Sem 1 Mock Test 2 Answer.pdf",
+      "Finals/AY16_17/ACC1002 AY16_17 Sem 1 Mock Test 2.pdf",
+      "Finals/AY17_18/ACC1701 AY17_18 Sem 1 Finals Answer.pdf",
+      "Finals/AY17_18/ACC1701 AY17_18 Sem 1 Finals.pdf",
+      "Finals/AY17_18/ACC1701 AY17_18 Sem 1 Mock Exam Answer.pdf",
+      "Finals/AY17_18/ACC1701 AY17_18 Sem 1 Mock Exam.pdf",
+      "Finals/AY18_19/ACC1701 AY18_19 Sem 1 Finals Answer.pdf",
+      "Finals/AY18_19/ACC1701 AY18_19 Sem 1 Finals.pdf",
+      "Finals/AY19_20/ACC1701 AY19_20 Sem 1 Mock Exam Answer.pdf",
+      "Finals/AY19_20/ACC1701 AY19_20 Sem 1 Mock Exam.pdf",
+      "Finals/AY19_20/ACC1701 AY19_20 Sem 2 Practice Exam + Answer.pdf",
+      "Finals/AY20_21/ACC1701X Mock Exam 1 Answer.pdf",
+      "Finals/AY20_21/ACC1701X Mock Exam 2 Answer.pdf",
+      "Finals/AY20_21/Additional MCQ Practice Questions with Answer 1.pdf",
+      "Finals/AY20_21/Additional MCQ Practice Questions with Answer 2.pdf",
+      "Finals/AY20_21/Mock Exam 2 - Essay Q UPDATED.pdf",
+      "Finals/Final Exam Announcement Mar 23.pdf",
+      "Lecture/ComfortDelGro 2021 Consoliated Financial Statements.pdf",
+      "Lecture/In-class Exercise Food2U Questions.pdf",
+      "Lecture/Lecture 01 Post Lecture Supplement.pdf",
+      "Lecture/Lecture 01 Slides - Accounting in Business and FS Overview.pdf",
+      "Lecture/Lecture 02 Slides - Mechanics of Accounting.pdf",
+      "Lecture/Lecture 03 Slides (Adjusting Accounts).pdf",
+      "Lecture/Lecture 04 Slides - Completing Accounting Cycle.pdf",
+      "Lecture/Lecture 05 Slides - FS Integrity.pdf",
+      "Lecture/Lecture 06 Slides - Receivables.pdf",
+      "Lecture/Lecture 07 Slides - Cash and Current Liabilities.pdf",
+      "Lecture/Lecture 08 Slides - Inventory.pdf",
+      "Lecture/Lecture 09 - PPE.pdf",
+      "Lecture/Lecture 10 Slides - Equity.pdf",
+      "Lecture/Lecture 11 Post Lecture Supplement.pdf",
+      "Lecture/Lecture 11 Slides - Statement of Cash Flows.pdf",
+      "Lecture/Lecture 12 Slides - Analyzing FS.pdf",
+      "Lecture/Post Lecture 02 Supplement.pdf",
+      "Lecture/Post Lecture 04 Supplement.pdf",
+      "Lecture/Post Lecture 05 Supplement.pdf",
+      "Lecture/Post Lecture 12 Supplement.pdf",
+      "Lecture/Tencent 2021 Annual Report.pdf",
+      "Lecture/Tutorial 7 Recap -  Inventory.pdf",
+      "Lecture/Uber 2021 Annual Report.pdf",
+      "Mock Finals/ACC 1701X Mock Exam #1 Solution.pdf",
+      "Mock Finals/ACC 1701X Mock Exam #3 Solution.pdf",
+      "Mock Finals/ACC1701X Mock Exam #2 Solution.pdf",
+      "Mock Finals/Mock Final Exams Instructions - READ THIS.pdf",
+      "Mock Midterm Test Solution.pdf",
+      "Tutorial/Admin/Group Presentation-3.docx",
+      "Tutorial/Admin/My tutorial groups-3.docx",
+      "Tutorial/Detailed Schedule with Tutorial Assignments (UPDATED OCT 6).pdf",
+      "Tutorial/HaloCrypto/ACC1701X Tutorial 4 Answer Solution.pdf",
+      "Tutorial/HaloCrypto/HaloCrypto Cumulative Case Tutorial Questions.pdf",
+      "Tutorial/HaloCrypto/Tutorail 1 Recap.pdf",
+      "Tutorial/HaloCrypto/Tutorial 2 Mechanics of Accounting.pdf",
+      "Tutorial/HaloCrypto/Tutorial 3 Adjusting Accounts.pdf",
+      "Tutorial/HaloCrypto/Tutorial 4 Completing the Accounting Cycle.pdf",
+      "Tutorial/Samsung/ACC1701X Tutorial 10 Answer Solution.pdf",
+      "Tutorial/Samsung/ACC1701X Tutorial 11 Answer Solution.pdf",
+      "Tutorial/Samsung/ACC1701X Tutorial 5 Answer Solution.pdf",
+      "Tutorial/Samsung/ACC1701X Tutorial 6 Answer Solution.pdf",
+      "Tutorial/Samsung/ACC1701X Tutorial 8 Answer Solution.pdf",
+      "Tutorial/Samsung/ACC1701X Tutorial 9 Answer Solution.pdf",
+      "Tutorial/Samsung/Samsung 2021 Financial Statements & Notes.pdf",
+      "Tutorial/Samsung/Samsung Understanding FS Tutorial Questions.pdf",
+      "Tutorial/Samsung/Tutorial 10 Recap - Statement of Cash Flow.pdf",
+      "Tutorial/Samsung/Tutorial 11 Recap - Financial Statement Analysis.pdf",
+      "Tutorial/Samsung/Tutorial 5 Recap Receivables - amended.pdf",
+      "Tutorial/Samsung/Tutorial 6 Recap - Cash & Current Liabilities.pdf",
+      "Tutorial/Samsung/Tutorial 8 Recap - PPE.pdf",
+      "Tutorial/Samsung/Tutorial 9 Questions Correction Update Oct 20.pdf",
+      "Tutorial/Samsung/Tutorial 9 Recap - Equity.pdf",
+      "cs1.pdf",
+      "cs2.pdf",
+      "cs3.pdf",
+      "textbook.pdf"
+    ]
+  },
+  "module_code": "ACC1701X",
+  "module_id": "y1s1-acc1701x",
+  "root_path": "raw/Y1S1/ACC1701X",
+  "skipped_files": 27,
+  "status": "published",
+  "term": "Y1S1",
+  "updated_at": "2026-04-11T05:22:38+00:00",
+  "usable_files": 98
+}
